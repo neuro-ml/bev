@@ -1,0 +1,6 @@
+wcmatch
+pyyaml
+paramiko
+tqdm
+redis
+humanfriendly
