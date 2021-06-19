@@ -57,6 +57,7 @@ class Repository:
         key, hash_path, pattern = self._split(Path(*parts), self._get_hash, version)
 
         assert pattern is not None
+        pattern = str(pattern)
         tree = self.storage.load(load_tree_hash, key)
 
         files = set(tree)
