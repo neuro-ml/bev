@@ -12,7 +12,7 @@ def update(source: str, destination: str, keep: bool, overwrite: bool):
         raise ValueError('The destination must be a hash.')
 
     repo = get_current_repo()
-    key = load_tree_key(source)
+    key = load_tree_key(destination)
     mapping = repo.storage.load(load_tree_hash, key)
 
     new = add_folder(repo, source, None, keep=True)
