@@ -43,7 +43,7 @@ class Repository:
             return key
 
         inside = str(inside)
-        tree = self.storage.load(load_tree_hash, key)
+        tree = self._get_tree(key, version)
         if inside not in tree:
             raise HashNotFoundError(inside)
 
@@ -73,7 +73,9 @@ class Repository:
         exists, key = self._get_hash(Path(path), version)
         if not exists:
             raise HashNotFoundError(path)
+        return self._get_tree(key, version)
 
+    def _get_tree(self, key, version):
         if version == UNCOMMITTED:
             return self.storage.load(load_tree_hash, key)
         return self._load_cached_tree(key)
