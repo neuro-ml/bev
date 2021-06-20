@@ -71,8 +71,8 @@ def add_folder(repo: Repository, source: Path, destination: Optional[Path], keep
     return result
 
 
-def add(source: str, destination: str, keep: bool):
-    repo = get_current_repo()
+def add(source: str, destination: str, keep: bool, context: str = '.'):
+    repo = get_current_repo(context)
     source = Path(source)
 
     if destination is None:

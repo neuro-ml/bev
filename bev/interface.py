@@ -8,7 +8,7 @@ from typing import Union, Callable
 from connectome.storage import Storage
 from wcmatch import glob
 
-from .hash import is_hash, to_hash, load_tree_hash, load_tree_key
+from .hash import is_hash, to_hash, from_hash, load_tree_hash, load_tree_key
 from .utils import call_git, HashNotFoundError
 
 PathLike = Union[str, Path]
@@ -55,6 +55,8 @@ class Repository:
 
     def glob(self, *parts: PathLike, version: str):
         key, hash_path, pattern = self._split(Path(*parts), self._get_hash, version)
+        # TODO: add this to _split
+        parent = from_hash(hash_path)
 
         assert pattern is not None
         pattern = str(pattern)
@@ -65,13 +67,19 @@ class Repository:
             files.update(map(str, list(Path(file).parents)[:-1]))
         files = sorted(files)
 
-        return [hash_path / file for file in glob.globfilter(files, pattern, flags=glob.GLOBSTAR)]
+        return [parent / file for file in glob.globfilter(files, pattern, flags=glob.GLOBSTAR)]
 
     def load_tree(self, path: PathLike, version: str):
         exists, key = self._get_hash(Path(path), version)
         if not exists:
             raise HashNotFoundError(path)
 
+        if version == UNCOMMITTED:
+            return self.storage.load(load_tree_hash, key)
+        return self._load_cached_tree(key)
+
+    @lru_cache(None)
+    def _load_cached_tree(self, key):
         return self.storage.load(load_tree_hash, key)
 
     def _get_hash(self, path: Path, version: str):

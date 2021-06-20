@@ -106,7 +106,12 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
             cache = CacheMeta(**meta['cache'])
         result[name] = StorageMeta(locations, cache)
 
-    entry = result.pop(choose_local(result, filter_func))
+    if len(result) == 1:
+        entry, = result.values()
+        result = {}
+    else:
+        entry = result.pop(choose_local(result, filter_func))
+
     return entry, result
 
 
