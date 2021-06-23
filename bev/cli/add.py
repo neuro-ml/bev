@@ -33,7 +33,7 @@ def save_tree(repo: Repository, tree: dict, destination: Path):
     os.remove(tree_path)
 
     with open(destination, 'w') as file:
-        file.write(f'tree:{key}')
+        file.write(f'T:{key}')
 
     return key
 

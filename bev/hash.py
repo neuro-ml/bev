@@ -24,7 +24,12 @@ def load_tree_hash(path: Path):
 # FIXME: the names are misleading
 def load_tree_key(path: Path):
     with open(path) as file:
-        key = file.read().strip()
-        if key.startswith('tree:'):
-            key = key[5:]
-        return key
+        return strip_tree(file.read().strip())
+
+
+def strip_tree(key):
+    if key.startswith('tree:'):
+        key = key[5:]
+    elif key.startswith('T:'):
+        key = key[2:]
+    return key

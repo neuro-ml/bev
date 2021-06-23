@@ -8,7 +8,7 @@ from typing import Union, Callable
 from connectome.storage import Storage
 from wcmatch import glob
 
-from .hash import is_hash, to_hash, from_hash, load_tree_hash, load_tree_key
+from .hash import is_hash, to_hash, from_hash, load_tree_hash, load_tree_key, strip_tree
 from .utils import call_git, HashNotFoundError
 
 PathLike = Union[str, Path]
@@ -48,10 +48,6 @@ class Repository:
             raise HashNotFoundError(inside)
 
         return tree[inside]
-
-    # TODO: this method will be deprecated in future versions
-    def pull(self, *parts: PathLike, version: str):
-        return self.storage.get_path(self.get_key(*parts, version=version), name=Path(parts[-1]).name)
 
     def glob(self, *parts: PathLike, version: str):
         key, hash_path, pattern = self._split(Path(*parts), self._get_hash, version)
@@ -103,9 +99,8 @@ class Repository:
             relative = f'./{relative}'
 
         try:
-            key = call_git(f'git show {version}:{relative}', self.root)
-            if key.startswith('tree:'):
-                key = key[5:]
+            # TODO: just return None or str?
+            key = strip_tree(call_git(f'git show {version}:{relative}', self.root))
             return True, key
         except subprocess.CalledProcessError:
             return False, None
