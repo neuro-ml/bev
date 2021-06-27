@@ -3,4 +3,3 @@ pyyaml
 paramiko
 tqdm
 redis
-humanfriendly

@@ -1,40 +1,28 @@
-import ast
 import platform
 from itertools import chain
 from pathlib import Path
 from typing import NamedTuple, Dict, Sequence, Tuple
 import importlib
 
-from connectome.storage import Storage, SSHLocation, Disk
-from connectome.storage.locker import RedisLocker
 from paramiko.config import SSHConfig
-from redis import Redis
 from yaml import safe_load
-import humanfriendly
 
+from connectome.storage import Storage, SSHLocation, Disk
 from .interface import Repository, PathLike
 
 
+# TODO: pydantic
 class LocationMeta(NamedTuple):
     root: str
-    free: int = 0
-    size: int = None
     host: str = None
-    lock: str = None
-    lock_prefix_size: int = 16
-
-
-class CacheMeta(NamedTuple):
-    root: str
-    lock: str = None
 
 
 class StorageMeta(NamedTuple):
     locations: Sequence[LocationMeta]
-    cache: CacheMeta = None
+    cache: str = None
 
 
-def build_storage(path: Path) -> Tuple[Storage, CacheMeta]:
+def build_storage(path: Path) -> Tuple[Storage, str]:
     with open(path, 'r') as file:
         config = safe_load(file)
 
@@ -57,54 +45,30 @@ def build_storage(path: Path) -> Tuple[Storage, CacheMeta]:
                     'hostname': location.host} or location.host in config.get_hostnames())
             ]
 
-    local = []
-    for location in entry.locations:
-        local.append(Disk(
-            location.root, location.free, location.size, locker=make_locker(location.lock),
-            lock_prefix_size=location.lock_prefix_size
-        ))
-
+    local = [Disk(location.root) for location in entry.locations]
     return Storage(local, remote), entry.cache
-
-
-def make_locker(locker):
-    if locker is None:
-        return
-
-    locker = locker.strip()
-    assert locker.endswith(')')
-    idx = locker.index('(')
-    name, args = locker[:idx], locker[idx:]
-    # TODO: add real name detection
-    assert name == 'Redis'
-    url, prefix = ast.literal_eval(args)
-    return RedisLocker(Redis(url), prefix, 10 * 60)
 
 
 def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
     filter_func = choose_by_hostname
-    if '__filter__' in config:
-        path, attr = config.pop('__filter__').rsplit('.', 1)
+    meta = config.pop('meta', {})
+    assert set(meta) <= {'choose'}
+    if 'choose' in meta:
+        path, attr = meta.pop('choose').rsplit('.', 1)
         filter_func = getattr(importlib.import_module(path), attr)
 
     result = {}
     for name, meta in config.items():
         default = meta.pop('default', {})
-        locations = []
+        assert set(meta) <= {'storage', 'cache'}
 
+        locations = []
         for location in meta['storage']:
             keys = default.copy()
             keys.update(location)
-            for k in ['size', 'free']:
-                if k in keys:
-                    keys[k] = humanfriendly.parse_size(keys[k])
-
             locations.append(LocationMeta(**keys))
 
-        cache = None
-        if 'cache' in meta:
-            cache = CacheMeta(**meta['cache'])
-        result[name] = StorageMeta(locations, cache)
+        result[name] = StorageMeta(locations, meta.get('cache'))
 
     if len(result) == 1:
         entry, = result.values()
