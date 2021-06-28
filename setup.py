@@ -1,6 +1,6 @@
-from setuptools import setup, find_packages
+from pathlib import Path
 
-from bev.__version__ import __version__
+from setuptools import setup, find_packages
 
 classifiers = '''Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
@@ -12,6 +12,12 @@ with open('README.md', encoding='utf-8') as file:
 
 with open('requirements.txt', encoding='utf-8') as file:
     requirements = file.read().splitlines()
+
+# get the current version
+with open(Path(__file__).resolve().parent / 'bev/__version__.py', encoding='utf-8') as file:
+    scope = {}
+    exec(file.read(), scope)
+    __version__ = scope['__version__']
 
 setup(
     name='bev',
