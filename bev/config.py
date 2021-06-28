@@ -9,6 +9,7 @@ from yaml import safe_load
 
 from connectome.storage import Storage, SSHLocation, Disk
 from .interface import Repository, PathLike
+from .utils import RepositoryNotFoundError
 
 
 # TODO: pydantic
@@ -102,4 +103,4 @@ def get_current_repo(path: PathLike = '.') -> Repository:
             storage, cache = build_storage(config)
             return Repository(parent, storage, cache)
 
-    raise FileNotFoundError(f'{CONFIG} files not found in current folder\'s parents')
+    raise RepositoryNotFoundError(f'{CONFIG} files not found in current folder\'s parents')

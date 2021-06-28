@@ -15,3 +15,7 @@ def call(command: str, cwd=None) -> str:
 
 class HashNotFoundError(Exception):
     pass
+
+
+class RepositoryNotFoundError(Exception):
+    pass
