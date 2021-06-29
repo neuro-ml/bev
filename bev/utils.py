@@ -17,5 +17,13 @@ class HashNotFoundError(Exception):
     pass
 
 
-class RepositoryNotFoundError(Exception):
+class RepositoryError(Exception):
+    pass
+
+
+class RepositoryNotFoundError(RepositoryError):
+    pass
+
+
+class IncosistentRepositories(RepositoryError):
     pass

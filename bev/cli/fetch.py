@@ -2,11 +2,12 @@ from typing import Sequence
 
 from pathlib import Path
 
-from ..config import get_current_repo
+from ..interface import Repository
+from ..config import get_consistent_repo
 from ..hash import is_hash, to_hash, load_tree_hash, load_tree_key
 
 
-def _fetch(repo, path: Path):
+def _fetch(repo: Repository, path: Path):
     if not is_hash(path):
         path = to_hash(path)
 
@@ -18,6 +19,6 @@ def _fetch(repo, path: Path):
 
 
 def fetch(paths: Sequence[str], context: str = '.'):
-    repo = get_current_repo(context)
+    repo = get_consistent_repo([context, *paths])
     for path in paths:
         _fetch(repo, Path(context) / path)

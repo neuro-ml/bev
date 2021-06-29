@@ -3,8 +3,6 @@ import hashlib
 import inspect
 from pathlib import Path
 
-from yaml import safe_dump
-
 from connectome.storage.config import init_storage as _init_storage
 
 

@@ -9,7 +9,7 @@ from yaml import safe_load
 
 from connectome.storage import Storage, SSHLocation, Disk
 from .interface import Repository, PathLike
-from .utils import RepositoryNotFoundError
+from .utils import RepositoryNotFoundError, IncosistentRepositories
 
 
 # TODO: pydantic
@@ -95,12 +95,32 @@ def choose_by_hostname(key):
 CONFIG = '.bev.yml'
 
 
-def get_current_repo(path: PathLike = '.') -> Repository:
+def find_repo_root(path: PathLike):
     path = Path(path).resolve()
     for parent in chain([path], path.parents):
         config = parent / CONFIG
         if config.exists():
-            storage, cache = build_storage(config)
-            return Repository(parent, storage, cache)
+            return parent
 
-    raise RepositoryNotFoundError(f'{CONFIG} files not found in current folder\'s parents')
+
+def _root_to_repo(root: Path):
+    storage, cache = build_storage(root / CONFIG)
+    return Repository(root, storage, cache)
+
+
+def get_current_repo(path: PathLike = '.') -> Repository:
+    root = find_repo_root(path)
+    if root is None:
+        raise RepositoryNotFoundError(f'{CONFIG} files not found in current folder\'s parents')
+
+    return _root_to_repo(root)
+
+
+def get_consistent_repo(paths: Sequence[PathLike]) -> Repository:
+    roots = set(filter(None, map(find_repo_root, paths)))
+    if len(roots) > 1:
+        raise IncosistentRepositories('The paths are located in different repositories')
+    if not roots:
+        raise RepositoryNotFoundError(f'{CONFIG} files not found among folder\'s parents')
+
+    return _root_to_repo(roots.pop())

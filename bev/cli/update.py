@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-from ..config import get_current_repo
+from ..config import get_consistent_repo
 from ..hash import is_hash, load_tree_hash, load_tree_key
 from .add import add_folder, save_tree
 
@@ -10,8 +10,10 @@ def update(source: str, destination: str, keep: bool, overwrite: bool):
     source, destination = Path(source), Path(destination)
     if not is_hash(destination):
         raise ValueError('The destination must be a hash.')
+    if not source.is_dir():
+        raise ValueError('The source must be a folder.')
 
-    repo = get_current_repo()
+    repo = get_consistent_repo(['.', source, destination.parent])
     key = load_tree_key(destination)
     mapping = repo.storage.load(load_tree_hash, key)
 
