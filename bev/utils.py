@@ -2,6 +2,7 @@ import subprocess
 import shlex
 
 
+# TODO: use gitpython
 def call_git(command: str, cwd=None) -> str:
     return subprocess.check_output(shlex.split(command), cwd=cwd, stderr=subprocess.DEVNULL).decode('utf-8').strip()
 

@@ -1,3 +1,4 @@
+import os
 import platform
 from itertools import chain
 from pathlib import Path
@@ -51,12 +52,13 @@ def build_storage(path: Path) -> Tuple[Storage, str]:
 
 
 def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
-    filter_func = choose_by_hostname
+    filter_func = default_choose
     meta = config.pop('meta', {})
-    assert set(meta) <= {'choose'}
+    assert set(meta) <= {'choose', 'default'}
     if 'choose' in meta:
         path, attr = meta.pop('choose').rsplit('.', 1)
         filter_func = getattr(importlib.import_module(path), attr)
+    default_storage = meta.get('default')
 
     result = {}
     for name, meta in config.items():
@@ -71,11 +73,18 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
 
         result[name] = StorageMeta(locations, meta.get('cache'))
 
+    if default_storage is not None and default_storage not in result:
+        raise ValueError(f'The default storage ({default_storage}) is not present in the config')
+
     if len(result) == 1:
         entry, = result.values()
         result = {}
     else:
-        entry = result.pop(choose_local(result, filter_func))
+        name = choose_local(result, filter_func) or default_storage
+        if name is None:
+            raise ValueError('No matching entry in config')
+
+        entry = result.pop(name)
 
     return entry, result
 
@@ -85,10 +94,12 @@ def choose_local(names, func):
         if func(name):
             return name
 
-    raise ValueError('No matching entry in config')
 
+def default_choose(key):
+    env = os.environ.get('BEV__REPOSITORY')
+    if env:
+        return key == env
 
-def choose_by_hostname(key):
     return key == platform.node()
 
 
