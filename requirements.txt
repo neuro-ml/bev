@@ -3,4 +3,3 @@ pyyaml
 paramiko
 tqdm
 redis
-git+https://github.com/neuro-ml/connectome.git@v0.0.1#egg=connectome
