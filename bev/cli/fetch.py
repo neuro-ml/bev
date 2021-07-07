@@ -3,8 +3,9 @@ from typing import Sequence
 from pathlib import Path
 
 from ..interface import Repository
-from ..config import get_consistent_repo
+from ..shortcuts import get_consistent_repo
 from ..hash import is_hash, to_hash, load_tree_hash, load_tree_key
+from ..utils import HashNotFound
 
 
 def _fetch(repo: Repository, path: Path):
@@ -15,7 +16,7 @@ def _fetch(repo: Repository, path: Path):
     mapping = repo.storage.load(load_tree_hash, key)
     missing = repo.storage.fetch(mapping.values(), verbose=True)
     if missing:
-        raise FileNotFoundError(f'Could not fetch {len(missing)} keys from remote.')
+        raise HashNotFound(f'Could not fetch {len(missing)} keys from remote.')
 
 
 def fetch(paths: Sequence[str], context: str = '.'):

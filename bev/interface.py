@@ -1,31 +1,46 @@
+import os
 import subprocess
 from functools import lru_cache
 from pathlib import Path
-from typing import Union, Callable, Sequence
+from typing import Callable, Sequence
 
 from wcmatch import glob
 from connectome.storage import Storage
 
+from .config import CONFIG, build_storage, find_vcs_root
 from .hash import is_hash, to_hash, from_hash, load_tree_hash, load_tree_key, strip_tree
 from .local import Local
-from .utils import call_git, HashNotFoundError
+from .utils import InconsistentRepositories, call_git, HashNotFound, PathLike, RepositoryNotFound
 
-PathLike = Union[str, Path]
 # TODO: add `Local` here
 Version = str
 
 
 class Repository:
-    def __init__(self, root: Path, storage: Storage, cache):
+    def __init__(self, root: PathLike, storage: Storage, cache: PathLike = None):
         self.storage = storage
-        self.root = root
+        self.root = Path(root)
         self.cache = cache
 
     @classmethod
-    def from_root(cls, *relative: PathLike):
-        # FIXME: resolve circular import
-        from .config import _root_to_repo
-        return _root_to_repo(Path(*relative))
+    def from_root(cls, *parts: PathLike):
+        root = Path(*parts)
+        storage, cache = build_storage(root)
+        return cls(root, storage, cache)
+
+    @classmethod
+    def from_vcs(cls, *parts: PathLike):
+        vcs = find_vcs_root(Path(os.getcwd(), *parts))
+        if vcs is None:
+            raise RepositoryNotFound(f'{Path(*parts)} is not inside a vcs repository')
+
+        configs = list(vcs.rglob(CONFIG))
+        if not configs:
+            raise RepositoryNotFound(f'{Path(*parts)} is not inside a vcs repository')
+        if len(configs) > 1:
+            raise InconsistentRepositories(f'This vcs repository contains multiple bev repositories: {configs}')
+
+        return cls.from_root(configs[0].parent)
 
     @property
     def current_version(self):
@@ -72,14 +87,14 @@ class Repository:
         inside = str(inside)
         tree = self._get_tree(key, version)
         if inside not in tree:
-            raise HashNotFoundError(inside)
+            raise HashNotFound(inside)
 
         return tree[inside]
 
     def load_tree(self, path: PathLike, version: Version):
         exists, key = self._get_hash(Path(path), version)
         if not exists:
-            raise HashNotFoundError(path)
+            raise HashNotFound(path)
         return self._get_tree(key, version)
 
     def _get_tree(self, key, version):
@@ -129,7 +144,7 @@ class Repository:
         hash_path = to_hash(path)
         exists, payload = read(hash_path, *args)
         if not exists:
-            raise HashNotFoundError(path)
+            raise HashNotFound(path)
 
         # TODO: make sure it's not a tree hash
         return payload, hash_path, None

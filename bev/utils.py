@@ -1,5 +1,9 @@
+from pathlib import Path
 import subprocess
 import shlex
+from typing import Union
+
+PathLike = Union[str, Path]
 
 
 # TODO: use gitpython
@@ -14,7 +18,7 @@ def call(command: str, cwd=None) -> str:
         raise RuntimeError(e.stderr or e.stdout) from e
 
 
-class HashNotFoundError(Exception):
+class HashNotFound(Exception):
     pass
 
 
@@ -22,9 +26,13 @@ class RepositoryError(Exception):
     pass
 
 
-class RepositoryNotFoundError(RepositoryError):
+class RepositoryNotFound(RepositoryError):
     pass
 
 
-class IncosistentRepositories(RepositoryError):
+class InconsistentRepositories(RepositoryError):
     pass
+
+
+# legacy
+HashNotFoundError = HashNotFound

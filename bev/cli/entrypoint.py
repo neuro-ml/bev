@@ -15,7 +15,7 @@ def entrypoint():
     new = subparsers.add_parser('add')
     new.set_defaults(callback=add)
     new.add_argument('source')
-    new.add_argument('destination', nargs='?', default=None)
+    new.add_argument('destination')
     new.add_argument('-k', '--keep', default=False, action='store_true')
 
     new = subparsers.add_parser('fetch')

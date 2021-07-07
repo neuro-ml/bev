@@ -9,8 +9,9 @@ from paramiko.config import SSHConfig
 from yaml import safe_load
 
 from connectome.storage import Storage, SSHLocation, Disk
-from .interface import Repository, PathLike
-from .utils import RepositoryNotFoundError, IncosistentRepositories
+from .utils import RepositoryNotFound, InconsistentRepositories, PathLike
+
+CONFIG = '.bev.yml'
 
 
 # TODO: pydantic
@@ -24,8 +25,8 @@ class StorageMeta(NamedTuple):
     cache: str = None
 
 
-def build_storage(path: Path) -> Tuple[Storage, str]:
-    with open(path, 'r') as file:
+def build_storage(root: Path) -> Tuple[Storage, str]:
+    with open(root / CONFIG, 'r') as file:
         config = safe_load(file)
 
     entry, others = parse(config)
@@ -103,35 +104,16 @@ def default_choose(key):
     return key == platform.node()
 
 
-CONFIG = '.bev.yml'
-
-
-def find_repo_root(path: PathLike):
+def _find_root(path, marker):
     path = Path(path).resolve()
     for parent in chain([path], path.parents):
-        config = parent / CONFIG
-        if config.exists():
+        if (parent / marker).exists():
             return parent
 
 
-def _root_to_repo(root: Path):
-    storage, cache = build_storage(root / CONFIG)
-    return Repository(root, storage, cache)
+def find_repo_root(path: PathLike):
+    return _find_root(path, CONFIG)
 
 
-def get_current_repo(path: PathLike = '.') -> Repository:
-    root = find_repo_root(path)
-    if root is None:
-        raise RepositoryNotFoundError(f'{CONFIG} files not found in current folder\'s parents')
-
-    return _root_to_repo(root)
-
-
-def get_consistent_repo(paths: Sequence[PathLike]) -> Repository:
-    roots = set(filter(None, map(find_repo_root, paths)))
-    if len(roots) > 1:
-        raise IncosistentRepositories('The paths are located in different repositories')
-    if not roots:
-        raise RepositoryNotFoundError(f'{CONFIG} files not found among folder\'s parents')
-
-    return _root_to_repo(roots.pop())
+def find_vcs_root(path: PathLike):
+    return _find_root(path, '.git')

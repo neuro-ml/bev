@@ -4,7 +4,7 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from ..config import get_current_repo
+from ..shortcuts import get_current_repo
 from ..hash import is_hash, to_hash, from_hash, load_tree_hash, load_tree_key
 from .add import save_tree
 

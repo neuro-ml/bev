@@ -7,8 +7,8 @@ from typing import Optional
 
 from tqdm import tqdm
 
-from ..interface import Repository
-from ..config import get_consistent_repo
+from ..interface import Repository, PathLike
+from ..shortcuts import get_consistent_repo
 from ..hash import is_hash, to_hash
 
 
@@ -71,15 +71,13 @@ def add_folder(repo: Repository, source: Path, destination: Optional[Path], keep
     return result
 
 
-def add(source: str, destination: str, keep: bool, context: str = '.'):
-    source = Path(source)
+def add(source: PathLike, destination: PathLike, keep: bool, context: str = '.'):
+    source, destination = Path(source), Path(destination)
 
-    if destination is None:
-        destination = source.parent
-    else:
-        destination = Path(destination)
-
-    destination /= to_hash(source).name
+    if destination.is_dir():
+        destination /= to_hash(source).name
+    if not is_hash(destination):
+        destination = to_hash(destination)
     if destination.exists():
         raise FileExistsError(destination)
 

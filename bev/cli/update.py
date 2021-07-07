@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-from ..config import get_consistent_repo
+from ..shortcuts import get_consistent_repo
 from ..hash import is_hash, load_tree_hash, load_tree_key
 from .add import add_folder, save_tree
 

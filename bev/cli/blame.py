@@ -4,7 +4,7 @@ from datetime import datetime
 from tqdm import tqdm
 
 from ..hash import from_hash, is_hash
-from ..config import get_current_repo
+from ..shortcuts import get_current_repo
 from ..utils import call
 
 
