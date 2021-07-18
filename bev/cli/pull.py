@@ -5,7 +5,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from ..shortcuts import get_current_repo
-from ..hash import is_hash, to_hash, from_hash, load_tree_hash, load_tree_key
+from ..hash import is_hash, to_hash, from_hash, load_tree, load_tree_key
 from .add import save_tree
 
 
@@ -18,7 +18,7 @@ def pull(source: str, destination: str, mode: str):
         source = to_hash(source)
 
     key = load_tree_key(source)
-    mapping = repo.storage.load(load_tree_hash, key)
+    mapping = repo.storage.load(load_tree, key)
 
     for file, value in tqdm(mapping.items()):
         file = destination / file

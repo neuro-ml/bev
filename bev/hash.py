@@ -1,5 +1,8 @@
 import json
 from pathlib import Path
+from typing import NamedTuple
+
+Key = str
 
 
 def is_hash(path: Path):
@@ -16,7 +19,25 @@ def from_hash(path: Path):
     return path.with_name(path.stem)
 
 
-def load_tree_hash(path: Path):
+class FileHash(NamedTuple):
+    key: Key
+    path: Path
+    hash: Path
+
+
+class TreeHash(NamedTuple):
+    key: Key
+    root: Path
+    hash: Path
+    relative: Path
+
+
+def load_key(path: Path):
+    with open(path, 'r') as file:
+        return file.read().strip()
+
+
+def load_tree(path: Path):
     with open(path, 'r') as file:
         return json.load(file)
 

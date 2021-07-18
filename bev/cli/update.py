@@ -2,7 +2,7 @@ import shutil
 from pathlib import Path
 
 from ..shortcuts import get_consistent_repo
-from ..hash import is_hash, load_tree_hash, load_tree_key
+from ..hash import is_hash, load_tree, load_tree_key
 from .add import add_folder, save_tree
 
 
@@ -15,7 +15,7 @@ def update(source: str, destination: str, keep: bool, overwrite: bool):
 
     repo = get_consistent_repo(['.', source, destination.parent])
     key = load_tree_key(destination)
-    mapping = repo.storage.load(load_tree_hash, key)
+    mapping = repo.storage.load(load_tree, key)
 
     new = add_folder(repo, source, None, keep=True)
     common = set(new) & set(mapping)

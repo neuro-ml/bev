@@ -22,11 +22,18 @@ def setup_config():
 
         init_storage(storage, algorithm={'name': 'blake2b', 'digest_size': 64}, levels=[1, 31, 32])
         add(data_root / 'images', data_root, True, data_root)
+        add(data_root / '4.png', data_root, True, data_root)
         yield
         os.remove(data_root / '.bev.yml')
         os.remove(data_root / 'images.hash')
+        os.remove(data_root / '4.png.hash')
 
 
 @pytest.fixture
 def tests_root():
     return Path(__file__).parent
+
+
+@pytest.fixture
+def data_root(tests_root):
+    return tests_root / 'data'

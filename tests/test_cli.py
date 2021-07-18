@@ -1,6 +1,7 @@
 from bev.cli.fetch import fetch
 
 
-def test_fetch(tests_root):
-    fetch(['images.hash'], tests_root / 'data')
-    fetch([tests_root / 'data' / 'images.hash'])
+def test_fetch(data_root):
+    fetch(['images.hash'], data_root)
+    fetch([data_root / 'images.hash'])
+    fetch([data_root / '4.png.hash'])

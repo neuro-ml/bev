@@ -21,7 +21,7 @@ with open(Path(__file__).resolve().parent / 'bev/__version__.py', encoding='utf-
 
 setup(
     name='bev',
-    packages=find_packages(include=('bev*',)),
+    packages=find_packages(include=('bev',)),
     include_package_data=True,
     version=__version__,
     description='A small manager for versioned data',
