@@ -2,14 +2,14 @@ import os
 import platform
 from itertools import chain
 from pathlib import Path
-from typing import NamedTuple, Dict, Sequence, Tuple
+from typing import NamedTuple, Dict, Sequence, Tuple, Callable, Optional
 import importlib
 
 from paramiko.config import SSHConfig
 from yaml import safe_load
 
 from connectome.storage import Storage, SSHLocation, Disk
-from .utils import RepositoryNotFound, InconsistentRepositories, PathLike
+from .utils import PathLike
 
 CONFIG = '.bev.yml'
 
@@ -17,12 +17,14 @@ CONFIG = '.bev.yml'
 # TODO: pydantic
 class LocationMeta(NamedTuple):
     root: str
-    host: str = None
+    host: Optional[str] = None
 
 
 class StorageMeta(NamedTuple):
+    name: str
     locations: Sequence[LocationMeta]
-    cache: str = None
+    hostnames: Optional[Sequence[str]]
+    cache: Optional[str]
 
 
 def build_storage(root: Path) -> Tuple[Storage, str]:
@@ -53,7 +55,7 @@ def build_storage(root: Path) -> Tuple[Storage, str]:
 
 
 def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
-    filter_func = default_choose
+    filter_func: Callable[[StorageMeta], bool] = default_choose
     meta = config.pop('meta', {})
     assert set(meta) <= {'choose', 'default'}
     if 'choose' in meta:
@@ -64,7 +66,7 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
     result = {}
     for name, meta in config.items():
         default = meta.pop('default', {})
-        assert set(meta) <= {'storage', 'cache'}
+        assert set(meta) <= {'storage', 'cache', 'hostname'}
 
         locations = []
         for location in meta['storage']:
@@ -72,7 +74,11 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
             keys.update(location)
             locations.append(LocationMeta(**keys))
 
-        result[name] = StorageMeta(locations, meta.get('cache'))
+        hostname = meta.get('hostname')
+        if isinstance(hostname, str):
+            hostname = [hostname]
+
+        result[name] = StorageMeta(name, locations, hostname, meta.get('cache'))
 
     if default_storage is not None and default_storage not in result:
         raise ValueError(f'The default storage ({default_storage}) is not present in the config')
@@ -96,12 +102,14 @@ def choose_local(names, func):
             return name
 
 
-def default_choose(key):
-    env = os.environ.get('BEV__REPOSITORY')
-    if env:
-        return key == env
+def default_choose(meta: StorageMeta):
+    repo_key = 'BEV__REPOSITORY'
+    if repo_key in os.environ:
+        return meta.name == os.environ[repo_key]
 
-    return key == platform.node()
+    node = platform.node()
+    hosts = meta.hostnames or [meta.name]
+    return any(h == node for h in hosts)
 
 
 def _find_root(path, marker):

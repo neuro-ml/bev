@@ -1,7 +1,8 @@
 from typing import Sequence
-from bev.config import CONFIG, find_repo_root
-from bev.interface import Repository
-from bev.utils import InconsistentRepositories, PathLike, RepositoryNotFound
+
+from .config import CONFIG, find_repo_root
+from .interface import Repository
+from .utils import InconsistentRepositories, PathLike, RepositoryNotFound
 
 
 def get_current_repo(path: PathLike = '.') -> Repository:
@@ -9,7 +10,7 @@ def get_current_repo(path: PathLike = '.') -> Repository:
     if root is None:
         raise RepositoryNotFound(f'{CONFIG} files not found in current folder\'s parents')
 
-    return Repository.from_root(root)
+    return Repository(root)
 
 
 def get_consistent_repo(paths: Sequence[PathLike]) -> Repository:
@@ -19,4 +20,4 @@ def get_consistent_repo(paths: Sequence[PathLike]) -> Repository:
     if not roots:
         raise RepositoryNotFound(f'{CONFIG} files not found among folder\'s parents')
 
-    return Repository.from_root(roots.pop())
+    return Repository(roots.pop())

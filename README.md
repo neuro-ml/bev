@@ -39,57 +39,8 @@ tests coverage is much larger.
 
 # Getting started
 
-1. Create a config file named `.bev.yaml`:
+Here are some tutorials to quickly get you started:
 
-```yaml
-lv-426:
-  storage:
-    - root: /mount/hdd1/storage
-    - root: /mount/hdd2/storage
-
-fury-161:
-  storage:
-    - root: /nfs/vol1/data
-    - root: /nfs/vol2/data
-    - root: /nfs/vol8/data
-```
-
-Here `lv-426` and `fury-161` are two separate storage configurations. By default `bev` selects the appropriate
-configuration based on the current hostname. So on a machine named `lv-426` the first config will be selected.
-
-2. Add files to storage:
-
-```shell
-# folders
-bev add path/to/some/folder .
-# or separate files
-bev add path/to/some/file.png .
-```
-
-check the repo:
-
-```shell
-ls
-# folder.hash
-# file.png.hash
-```
-
-3. Add the hashes to git and commit:
-
-```shell
-git add folder.hash file.png.hash
-git commit -m "added essential files"
-```
-
-4. Access the files from Python:
-
-```python
-from bev import Repository
-
-# initialize the repo
-repo = Repository.from_root('path/to/repo')
-# get the real path of `file.png`
-image_path = repo.resolve('file.png', version='749335a')
-# get the real path of `annotation/points.json` located inside of `folder`
-points_path = repo.resolve('folder/annotation/points.json', version='749335a')
-```
+1. [Create a repository](https://github.com/neuro-ml/bev/wiki/Creating-a-repository) - needed only at first time setup
+2. [Adding files](https://github.com/neuro-ml/bev/wiki/Adding-files)
+3. [Accessing files](https://github.com/neuro-ml/bev/wiki/Accessing-the-stored-files)

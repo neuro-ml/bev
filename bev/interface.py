@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Sequence
 
 from wcmatch import glob
-from connectome.storage import Storage
 
 from .config import CONFIG, build_storage, find_vcs_root
 from .hash import is_hash, to_hash, load_tree, load_tree_key, strip_tree, FileHash, TreeHash, Key
@@ -17,16 +16,14 @@ Version = str
 
 
 class Repository:
-    def __init__(self, root: PathLike, storage: Storage, cache: PathLike = None):
-        self.storage = storage
-        self.root = Path(root)
-        self.cache = cache
+    def __init__(self, *root: PathLike, fetch: bool = True, version: Version = None):
+        self.root = Path(*root)
+        self.storage, self.cache = build_storage(self.root)
+        self._fetch, self._version = fetch, version
 
     @classmethod
     def from_root(cls, *parts: PathLike):
-        root = Path(*parts)
-        storage, cache = build_storage(root)
-        return cls(root, storage, cache)
+        return cls(*parts)
 
     @classmethod
     def from_vcs(cls, *parts: PathLike):
@@ -40,7 +37,7 @@ class Repository:
         if len(configs) > 1:
             raise InconsistentRepositories(f'This vcs repository contains multiple bev repositories: {configs}')
 
-        return cls.from_root(configs[0].parent)
+        return cls(configs[0].parent)
 
     @property
     def current_version(self):
@@ -56,17 +53,17 @@ class Repository:
 
         return call_git(f'git log -n 1 --pretty=format:%H -- {path}', self.root)
 
-    def resolve(self, *parts: PathLike, version: Version) -> Path:
-        key = self.get_key(*parts, version=version)
-        return self.storage.get_path(key)
+    def resolve(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Path:
+        key = self.get_key(*parts, version=version, fetch=fetch)
+        return self.storage.get_path(key, self._resolve_fetch(fetch))
 
-    def glob(self, *parts: PathLike, version: Version) -> Sequence[Path]:
+    def glob(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Sequence[Path]:
         h = self._split(Path(*parts), version)
         if not isinstance(h, TreeHash):
             raise ValueError('`glob` is only applicable to tree hashes')
 
         pattern = str(h.relative)
-        tree = self.storage.load(load_tree, h.key)
+        tree = self._load(load_tree, h.key, fetch)
 
         files = set(tree)
         for file in tree:
@@ -76,33 +73,34 @@ class Repository:
         return [h.root / file for file in glob.globfilter(files, pattern, flags=glob.GLOBSTAR)]
 
     # TODO: cache this based on path parents
-    def get_key(self, *parts: PathLike, version: Version) -> Key:
+    def get_key(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Key:
         h = self._split(Path(*parts), version)
         if isinstance(h, FileHash):
             return h.key
 
         assert isinstance(h, TreeHash), h
         relative = str(h.relative)
-        tree = self._get_tree(h.key, version)
+        tree = self._get_tree(h.key, version, fetch)
         if relative not in tree:
             raise HashNotFound(relative)
 
         return tree[relative]
 
-    def load_tree(self, path: PathLike, version: Version):
+    def load_tree(self, path: PathLike, version: Version = None, fetch: bool = None):
         key = self._get_hash(Path(path), version)
         if key is None:
             raise HashNotFound(path)
-        return self._get_tree(key, version)
+        return self._get_tree(key, version, fetch)
 
-    def _get_tree(self, key, version):
+    def _get_tree(self, key, version, fetch):
+        # we need the version here, because we want to cache only a committed tree
         if version == Local:
-            return self.storage.load(load_tree, key)
-        return self._load_cached_tree(key)
+            return self._load(load_tree, key, fetch)
+        return self._load_cached_tree(key, fetch)
 
     @lru_cache(None)
-    def _load_cached_tree(self, key):
-        return self.storage.load(load_tree, key)
+    def _load_cached_tree(self, key, fetch):
+        return self._load(load_tree, key, fetch=fetch)
 
     def _get_hash(self, path: Path, version: Version):
         if version == Local:
@@ -116,6 +114,9 @@ class Repository:
 
     @lru_cache(None)
     def _get_committed_hash(self, relative: Path, version: str):
+        if version is None:
+            version = self._version
+        assert isinstance(version, str)
         relative = str(relative)
         if not relative.startswith('./'):
             relative = f'./{relative}'
@@ -124,6 +125,10 @@ class Repository:
             return strip_tree(call_git(f'git show {version}:{relative}', self.root))
         except subprocess.CalledProcessError:
             pass
+
+    def _load(self, func, key, fetch):
+        fetch = self._resolve_fetch(fetch)
+        return self.storage.load(func, key, fetch=fetch)
 
     def _split(self, path: Path, version: Version):
         # TODO: use bin-search?
@@ -140,3 +145,8 @@ class Repository:
             raise HashNotFound(path)
 
         return FileHash(key, path, hash_path)
+
+    def _resolve_fetch(self, fetch):
+        if fetch is None:
+            return self._fetch
+        return fetch
