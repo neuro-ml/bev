@@ -1,5 +1,6 @@
 import os
 import platform
+import socket
 from itertools import chain
 from pathlib import Path
 from typing import NamedTuple, Dict, Sequence, Tuple, Callable, Optional
@@ -87,7 +88,7 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
         entry, = result.values()
         result = {}
     else:
-        name = choose_local(result, filter_func) or default_storage
+        name = choose_local(result.values(), filter_func) or default_storage
         if name is None:
             raise ValueError('No matching entry in config')
 
@@ -96,10 +97,10 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
     return entry, result
 
 
-def choose_local(names, func):
-    for name in names:
-        if func(name):
-            return name
+def choose_local(metas, func) -> str:
+    for meta in metas:
+        if func(meta):
+            return meta.name
 
 
 def default_choose(meta: StorageMeta):
@@ -107,7 +108,7 @@ def default_choose(meta: StorageMeta):
     if repo_key in os.environ:
         return meta.name == os.environ[repo_key]
 
-    node = platform.node()
+    node = socket.gethostname()
     hosts = meta.hostnames or [meta.name]
     return any(h == node for h in hosts)
 
