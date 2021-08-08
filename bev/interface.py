@@ -1,21 +1,37 @@
+import inspect
 import os
 import subprocess
+import warnings
 from functools import lru_cache
 from pathlib import Path
-from typing import Sequence
+from typing import Sequence, Union
 
 from wcmatch import glob
 
 from .config import CONFIG, build_storage, find_vcs_root
 from .hash import is_hash, to_hash, load_tree, load_tree_key, strip_tree, FileHash, TreeHash, Key
-from .local import Local
+from .local import Local, LocalVersion
 from .utils import InconsistentRepositories, call_git, HashNotFound, PathLike, RepositoryNotFound
 
-# TODO: add `Local` here
-Version = str
+CommittedVersion = str
+Version = Union[CommittedVersion, LocalVersion]
 
 
 class Repository:
+    """
+    Interface that represents a `bev` repository.
+
+    Parameters
+    ----------
+    root:
+        the path to the repository's root, i.e. the folder that contains `.bev.config`
+    fetch: bool
+        whether to fetch files from remote locations when needed. Can be overridden in corresponding methods
+    version: str, Local
+        default value for data version. Can be either a string with a commit hash/tag or the `Local` object.
+        Can be overridden in corresponding methods
+    """
+
     def __init__(self, *root: PathLike, fetch: bool = True, version: Version = None):
         self.root = Path(*root)
         self.storage, self.cache = build_storage(self.root)
@@ -23,10 +39,24 @@ class Repository:
 
     @classmethod
     def from_root(cls, *parts: PathLike):
+        warnings.warn(
+            'This classmethod is deprecated, call the constructor directly for the same behaviour', UserWarning)
         return cls(*parts)
 
     @classmethod
-    def from_vcs(cls, *parts: PathLike):
+    def from_here(cls, *relative: PathLike, fetch: bool = True, version: Version = None) -> 'Repository':
+        """
+        Creates a repository with a path `relative` to the file in which this method is called.
+
+        Examples
+        --------
+        >>> repo = Repository.from_here('../../data')
+        """
+        file = Path(inspect.stack()[1].filename)
+        return cls(file.parent / Path(*relative), fetch=fetch, version=version)
+
+    @classmethod
+    def from_vcs(cls, *parts: PathLike) -> 'Repository':
         vcs = find_vcs_root(Path(os.getcwd(), *parts))
         if vcs is None:
             raise RepositoryNotFound(f'{Path(*parts)} is not inside a vcs repository')
@@ -40,10 +70,10 @@ class Repository:
         return cls(configs[0].parent)
 
     @property
-    def current_version(self):
+    def current_version(self) -> CommittedVersion:
         return self.latest_version()
 
-    def latest_version(self, path: PathLike = '.'):
+    def latest_version(self, path: PathLike = '.') -> CommittedVersion:
         path = Path(path)
         if not (self.root / path).exists() and not is_hash(path):
             path = to_hash(path)
@@ -86,11 +116,13 @@ class Repository:
 
         return tree[relative]
 
-    def load_tree(self, path: PathLike, version: Version = None, fetch: bool = None):
+    def load_tree(self, path: PathLike, version: Version = None, fetch: bool = None) -> dict:
         key = self._get_hash(Path(path), version)
         if key is None:
             raise HashNotFound(path)
         return self._get_tree(key, version, fetch)
+
+    # internal logic
 
     def _get_tree(self, key, version, fetch):
         # we need the version here, because we want to cache only a committed tree
