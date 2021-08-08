@@ -12,4 +12,5 @@ def test_glob(data_root):
 
 def test_from_here():
     repo = Repository.from_here('data')
-    assert str(repo.root.resolve()) == str(Path('data').resolve())
+    expected = Path(__file__).parent / 'data'
+    assert str(repo.root.resolve()) == str(expected.resolve())
