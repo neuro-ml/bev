@@ -12,4 +12,4 @@ def test_glob(data_root):
 
 def test_from_here():
     repo = Repository.from_here('data')
-    assert repo.root.resolve() == Path('data').resolve()
+    assert str(repo.root.resolve()) == str(Path('data').resolve())
