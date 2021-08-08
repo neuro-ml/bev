@@ -14,3 +14,8 @@ def test_from_here():
     repo = Repository.from_here('data')
     expected = Path(__file__).parent / 'data'
     assert str(repo.root.resolve()) == str(expected.resolve())
+
+
+def test_class_defaults(data_root):
+    repo = Repository(data_root, version=Local)
+    repo.resolve('4.png')

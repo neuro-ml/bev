@@ -84,10 +84,12 @@ class Repository:
         return call_git(f'git log -n 1 --pretty=format:%H -- {path}', self.root)
 
     def resolve(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Path:
+        version = self._resolve_version(version)
         key = self.get_key(*parts, version=version, fetch=fetch)
         return self.storage.get_path(key, self._resolve_fetch(fetch))
 
     def glob(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Sequence[Path]:
+        version = self._resolve_version(version)
         h = self._split(Path(*parts), version)
         if not isinstance(h, TreeHash):
             raise ValueError('`glob` is only applicable to tree hashes')
@@ -104,6 +106,7 @@ class Repository:
 
     # TODO: cache this based on path parents
     def get_key(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Key:
+        version = self._resolve_version(version)
         h = self._split(Path(*parts), version)
         if isinstance(h, FileHash):
             return h.key
@@ -117,6 +120,7 @@ class Repository:
         return tree[relative]
 
     def load_tree(self, path: PathLike, version: Version = None, fetch: bool = None) -> dict:
+        version = self._resolve_version(version)
         key = self._get_hash(Path(path), version)
         if key is None:
             raise HashNotFound(path)
@@ -146,9 +150,7 @@ class Repository:
 
     @lru_cache(None)
     def _get_committed_hash(self, relative: Path, version: str):
-        if version is None:
-            version = self._version
-        assert isinstance(version, str)
+        assert isinstance(version, str), type(version)
         relative = str(relative)
         if not relative.startswith('./'):
             relative = f'./{relative}'
@@ -182,3 +184,10 @@ class Repository:
         if fetch is None:
             return self._fetch
         return fetch
+
+    def _resolve_version(self, version):
+        if version is None:
+            version = self._version
+        if version is None:
+            raise ValueError('The argument `version` must be provided.')
+        return version
