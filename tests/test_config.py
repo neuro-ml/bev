@@ -9,6 +9,6 @@ from bev.config import parse
 def test_select_name(name):
     config = {'first': {'storage': [{'root': '1'}]}, 'second': {'storage': [{'root': '2'}]}}
     with mock.patch('socket.gethostname', return_value=name):
-        entry, others = parse(config)
+        entry, others, order_func = parse(config)
         assert entry.name == name
         assert others

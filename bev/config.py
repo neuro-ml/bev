@@ -1,6 +1,6 @@
 import os
-import platform
 import socket
+import warnings
 from itertools import chain
 from pathlib import Path
 from typing import NamedTuple, Dict, Sequence, Tuple, Callable, Optional
@@ -8,8 +8,8 @@ import importlib
 
 from paramiko.config import SSHConfig
 from yaml import safe_load
-
 from connectome.storage import Storage, SSHLocation, Disk
+
 from .utils import PathLike
 
 CONFIG = '.bev.yml'
@@ -32,7 +32,7 @@ def build_storage(root: Path) -> Tuple[Storage, str]:
     with open(root / CONFIG, 'r') as file:
         config = safe_load(file)
 
-    entry, others = parse(config)
+    entry, others, order_func = parse(config)
 
     remote = []
     # filter only available hosts
@@ -51,18 +51,27 @@ def build_storage(root: Path) -> Tuple[Storage, str]:
                     'hostname': location.host} or location.host in config.get_hostnames())
             ]
 
-    local = [Disk(location.root) for location in entry.locations]
+    local = order_func([Disk(location.root) for location in entry.locations])
     return Storage(local, remote), entry.cache
 
 
-def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
+def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta], Callable]:
     filter_func: Callable[[StorageMeta], bool] = default_choose
+    order_func: Callable[[Sequence[Disk]], Sequence[Disk]] = identity
     meta = config.pop('meta', {})
-    assert set(meta) <= {'choose', 'default'}
+    assert set(meta) <= {'choose', 'default', 'fallback', 'order'}
     if 'choose' in meta:
         path, attr = meta.pop('choose').rsplit('.', 1)
         filter_func = getattr(importlib.import_module(path), attr)
-    default_storage = meta.get('default')
+    if 'order' in meta:
+        path, attr = meta.pop('order').rsplit('.', 1)
+        order_func = getattr(importlib.import_module(path), attr)
+    if 'default' in meta:
+        warnings.warn('The config parameter `meta: default` was renamed to `meta: fallback`')
+        assert 'fallback' not in meta
+        default_storage = meta['default']
+    else:
+        default_storage = meta.get('fallback')
 
     result = {}
     for name, meta in config.items():
@@ -94,7 +103,7 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta]]:
 
         entry = result.pop(name)
 
-    return entry, result
+    return entry, result, order_func
 
 
 def choose_local(metas, func) -> str:
@@ -111,6 +120,10 @@ def default_choose(meta: StorageMeta):
     node = socket.gethostname()
     hosts = meta.hostnames or [meta.name]
     return any(h == node for h in hosts)
+
+
+def identity(x):
+    return x
 
 
 def _find_root(path, marker):
