@@ -96,18 +96,15 @@ class Repository:
 
         pattern = str(h.relative)
         tree = self._load(load_tree, h.key, fetch)
-
-        files = set(tree)
-        for file in tree:
-            files.update(map(str, list(Path(file).parents)[:-1]))
-        files = sorted(files)
+        files = sorted(self._expand_folders(tree))
 
         return [h.root / file for file in glob.globfilter(files, pattern, flags=glob.GLOBSTAR)]
 
     # TODO: cache this based on path parents
     def get_key(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Key:
         version = self._resolve_version(version)
-        h = self._split(Path(*parts), version)
+        path = Path(*parts)
+        h = self._split(path, version)
         if isinstance(h, FileHash):
             return h.key
 
@@ -115,7 +112,10 @@ class Repository:
         relative = str(h.relative)
         tree = self._get_tree(h.key, version, fetch)
         if relative not in tree:
-            raise HashNotFound(relative)
+            if relative in self._expand_folders(tree):
+                raise HashNotFound(f'"{str(path)}" is a folder inside a tree hash')
+
+            raise HashNotFound(str(path))
 
         return tree[relative]
 
@@ -191,3 +191,10 @@ class Repository:
         if version is None:
             raise ValueError('The argument `version` must be provided.')
         return version
+
+    @staticmethod
+    def _expand_folders(tree) -> set:
+        result = set(tree)
+        for file in tree:
+            result.update(map(str, list(Path(file).parents)[:-1]))
+        return result
