@@ -32,7 +32,7 @@ def build_storage(root: Path) -> Tuple[Storage, str]:
     with open(root / CONFIG, 'r') as file:
         config = safe_load(file)
 
-    entry, others, order_func = parse(config)
+    entry, others, order_func = parse(root, config)
 
     remote = []
     # filter only available hosts
@@ -55,7 +55,7 @@ def build_storage(root: Path) -> Tuple[Storage, str]:
     return Storage(local, remote), entry.cache
 
 
-def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta], Callable]:
+def parse(root: Path, config) -> Tuple[StorageMeta, Dict[str, StorageMeta], Callable]:
     filter_func: Callable[[StorageMeta], bool] = default_choose
     order_func: Callable[[Sequence[Disk]], Sequence[Disk]] = identity
     meta = config.pop('meta', {})
@@ -67,7 +67,7 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta], Callable]:
         path, attr = meta.pop('order').rsplit('.', 1)
         order_func = getattr(importlib.import_module(path), attr)
     if 'default' in meta:
-        warnings.warn('The config parameter `meta: default` was renamed to `meta: fallback`')
+        warnings.warn(f'In {root}: the config parameter `meta: default` was renamed to `meta: fallback`')
         assert 'fallback' not in meta
         default_storage = meta['default']
     else:
@@ -91,7 +91,7 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta], Callable]:
         result[name] = StorageMeta(name, locations, hostname, meta.get('cache'))
 
     if default_storage is not None and default_storage not in result:
-        raise ValueError(f'The default storage ({default_storage}) is not present in the config')
+        raise ValueError(f'The default storage ({default_storage}) is not present in the config {root}')
 
     if len(result) == 1:
         entry, = result.values()
@@ -99,7 +99,7 @@ def parse(config) -> Tuple[StorageMeta, Dict[str, StorageMeta], Callable]:
     else:
         name = choose_local(result.values(), filter_func) or default_storage
         if name is None:
-            raise ValueError('No matching entry in config')
+            raise ValueError(f'No matching entry in config {root}')
 
         entry = result.pop(name)
 
