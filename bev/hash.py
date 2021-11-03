@@ -27,9 +27,24 @@ class FileHash(NamedTuple):
 
 class TreeHash(NamedTuple):
     key: Key
+    path: Path
+    hash: Path
+
+
+class InsideTreeHash(NamedTuple):
+    key: Key
     root: Path
     hash: Path
     relative: Path
+
+
+def dispatch_hash(path):
+    path = Path(path)
+    key = load_key(path)
+    stripped = strip_tree(key)
+    if key == stripped:
+        return FileHash(key, from_hash(path), path)
+    return TreeHash(stripped, from_hash(path), path)
 
 
 def load_key(path: Path):
@@ -49,6 +64,7 @@ def load_tree_key(path: Path):
 
 
 def strip_tree(key):
+    # TODO: remove this
     if key.startswith('tree:'):
         key = key[5:]
     elif key.startswith('T:'):

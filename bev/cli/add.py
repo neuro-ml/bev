@@ -74,6 +74,9 @@ def add_folder(repo: Repository, source: Path, destination: Optional[Path], keep
 def add(source: PathLike, destination: PathLike, keep: bool, context: str = '.'):
     source, destination = Path(source), Path(destination)
 
+    if not source.exists():
+        raise FileNotFoundError(source)
+
     if destination.is_dir():
         destination /= to_hash(source).name
     if not is_hash(destination):

@@ -9,7 +9,7 @@ from typing import Sequence, Union
 from wcmatch import glob
 
 from .config import CONFIG, build_storage, find_vcs_root
-from .hash import is_hash, to_hash, load_tree, load_tree_key, strip_tree, FileHash, TreeHash, Key
+from .hash import is_hash, to_hash, load_tree, load_tree_key, strip_tree, FileHash, InsideTreeHash, Key
 from .local import Local, LocalVersion
 from .utils import InconsistentRepositories, call_git, HashNotFound, PathLike, RepositoryNotFound
 
@@ -91,7 +91,7 @@ class Repository:
     def glob(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Sequence[Path]:
         version = self._resolve_version(version)
         h = self._split(Path(*parts), version)
-        if not isinstance(h, TreeHash):
+        if not isinstance(h, InsideTreeHash):
             raise ValueError('`glob` is only applicable to tree hashes')
 
         pattern = str(h.relative)
@@ -108,7 +108,7 @@ class Repository:
         if isinstance(h, FileHash):
             return h.key
 
-        assert isinstance(h, TreeHash), h
+        assert isinstance(h, InsideTreeHash), h
         relative = str(h.relative)
         tree = self._get_tree(h.key, version, fetch)
         if relative not in tree:
@@ -171,7 +171,7 @@ class Repository:
             key = self._get_hash(hash_path, version)
             if key is not None:
                 key = strip_tree(key)
-                return TreeHash(key, parent, hash_path, path.relative_to(parent))
+                return InsideTreeHash(key, parent, hash_path, path.relative_to(parent))
 
         hash_path = to_hash(path)
         key = self._get_hash(hash_path, version)

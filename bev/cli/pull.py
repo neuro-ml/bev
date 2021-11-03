@@ -5,7 +5,7 @@ from pathlib import Path
 from tqdm import tqdm
 
 from ..shortcuts import get_current_repo
-from ..hash import is_hash, to_hash, from_hash, load_tree, load_tree_key
+from ..hash import is_hash, to_hash, from_hash, load_tree, dispatch_hash, TreeHash
 from .add import save_tree
 
 
@@ -17,13 +17,20 @@ def pull(source: str, destination: str, mode: str):
     if not is_hash(source):
         source = to_hash(source)
 
-    key = load_tree_key(source)
-    mapping = repo.storage.load(load_tree, key)
+    if not source.exists():
+        raise FileNotFoundError(source)
 
-    for file, value in tqdm(mapping.items()):
-        file = destination / file
-        file.parent.mkdir(parents=True, exist_ok=True)
-        PULL_MODES[mode](value, file, repo)
+    h = dispatch_hash(source)
+    if isinstance(h, TreeHash):
+        mapping = repo.storage.load(load_tree, h.key)
+
+        for file, value in tqdm(mapping.items()):
+            file = destination / file
+            file.parent.mkdir(parents=True, exist_ok=True)
+            PULL_MODES[mode](value, file, repo)
+
+    else:
+        PULL_MODES[mode](h.key, destination, repo)
 
 
 def save_hash(value, file, repo):
@@ -43,6 +50,9 @@ def gather(source: str, destination: str):
     source, destination = Path(source), Path(destination)
     if not is_hash(destination):
         destination = to_hash(destination)
+
+    if not source.exists():
+        raise FileNotFoundError(source)
 
     tree = {}
     files = [file for file in source.glob('**/*') if not file.is_dir()]
