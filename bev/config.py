@@ -40,7 +40,7 @@ class LocationConfig(BaseModel):
 class StorageConfig(BaseModel):
     name: str
     default: Dict[str, Any] = None
-    hostnames: Tuple[str, ...] = None
+    hostname: Tuple[str, ...] = None
     storage: Tuple[LocationConfig, ...]
     cache: str = None
 
@@ -165,7 +165,7 @@ def default_choose(meta: StorageConfig):
         return meta.name == os.environ[repo_key]
 
     node = socket.gethostname()
-    hosts = meta.hostnames or [meta.name]
+    hosts = meta.hostname or [meta.name]
     return any(h == node for h in hosts)
 
 

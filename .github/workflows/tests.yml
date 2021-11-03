@@ -29,8 +29,18 @@ jobs:
           name: pytest-results-${{ matrix.python-version }}
           path: reports/junit-${{ matrix.python-version }}.xml
         if: ${{ always() }}
+      - name: Generate coverage report
+        run: |
+          coverage xml -o reports/coverage-${{ matrix.python-version }}.xml
+      - name: Upload pytest results
+        uses: actions/upload-artifact@v2
+        with:
+          name: pytest-results-${{ matrix.python-version }}
+          path: reports/junit-${{ matrix.python-version }}.xml
+        if: ${{ always() }}
       - name: Upload coverage results
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2
         with:
           fail_ci_if_error: true
+          files: reports/coverage-${{ matrix.python-version }}.xml
           verbose: true
