@@ -142,10 +142,10 @@ def parse(root, config) -> RepositoryConfig:
         local, = entries.values()
         remotes = []
     else:
-        local = choose_local(entries.values(), filter_func, fallback)
-        if local is None:
+        name = choose_local(entries.values(), filter_func, fallback)
+        if name is None:
             raise ConfigError(f'No matching entry in config {root}')
-        entries.pop(local.name)
+        local = entries.pop(name)
         remotes = list(entries.values())
 
     return RepositoryConfig(local=local, remotes=remotes, meta=meta)
@@ -154,7 +154,7 @@ def parse(root, config) -> RepositoryConfig:
 def choose_local(metas, func, default):
     for meta in metas:
         if func(meta):
-            return meta
+            return meta.name
 
     return default
 
