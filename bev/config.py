@@ -3,13 +3,14 @@ import socket
 import warnings
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Sequence, Tuple, Callable, Any
+from typing import Dict, Sequence, Tuple, Callable, Any, Union
 import importlib
 
 from paramiko.config import SSHConfig
 from pydantic import BaseModel, Extra, validator, root_validator
 from yaml import safe_load
 from connectome.storage import Storage, SSHLocation, Disk
+from connectome.storage.config import HashConfig
 
 from .utils import PathLike
 
@@ -21,7 +22,7 @@ class ConfigError(Exception):
 
 
 class LocationConfig(BaseModel):
-    root: str
+    root: Path
     ssh: str = None
 
     @root_validator(pre=True)
@@ -37,16 +38,27 @@ class LocationConfig(BaseModel):
         extra = Extra.forbid
 
 
+LocationConfigs = Tuple[LocationConfig, ...]
+
+
 class StorageConfig(BaseModel):
     name: str
     default: Dict[str, Any] = None
     hostname: Tuple[str, ...] = None
-    storage: Tuple[LocationConfig, ...]
-    cache: str = None
+    storage: LocationConfigs
+    cache: LocationConfigs = ()
 
-    @validator('storage', each_item=True, pre=True)
+    @validator('storage', 'cache', pre=True)
+    def from_string(cls, v):
+        if isinstance(v, str):
+            v = v,
+        return v
+
+    @validator('storage', 'cache', each_item=True, pre=True)
     def add_defaults(cls, v, values):
         default = (values['default'] or {}).copy()
+        if isinstance(v, str):
+            v = {'root': v}
         assert isinstance(v, dict)
         default.update(v)
         return default
@@ -59,6 +71,13 @@ class ConfigMeta(BaseModel):
     choose: str = None
     fallback: str = None
     order: str = None
+    hash: Union[str, HashConfig] = None
+
+    @validator('hash', pre=True)
+    def normalize_hash(cls, v):
+        if isinstance(v, str):
+            v = {'name': v}
+        return v
 
     @root_validator(pre=True)
     def resolve_deprecation(cls, values):
@@ -82,11 +101,15 @@ class RepositoryConfig(BaseModel):
         extra = Extra.forbid
 
 
-def build_storage(root: Path) -> Tuple[Storage, str]:
-    with open(root / CONFIG, 'r') as file:
-        config = parse(root, safe_load(file))
+def load_config(config: Path) -> RepositoryConfig:
+    with open(config, 'r') as file:
+        return parse(config, safe_load(file))
 
+
+def build_storage(root: Path) -> Tuple[Storage, LocationConfigs]:
+    config = load_config(root / CONFIG)
     meta = config.meta
+
     order_func: Callable[[Sequence[Disk]], Sequence[Disk]] = identity
     if meta.order is not None:
         path, attr = meta.order.rsplit('.', 1)
@@ -120,8 +143,10 @@ def parse(root, config) -> RepositoryConfig:
     meta = ConfigMeta.parse_obj(config.pop('meta', {}))
     entries = {}
     for name, entry in config.items():
+        if isinstance(entry, str):
+            entry = {'storage': entry}
         if not isinstance(entry, dict):
-            raise ConfigError('Each config entry must be a dict')
+            raise ConfigError('Each config entry must be either a dict or a string')
         if 'name' in entry:
             raise ConfigError('The key "name" is not available')
         entry = entry.copy()

@@ -86,7 +86,7 @@ class Repository:
     def resolve(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Path:
         version = self._resolve_version(version)
         key = self.get_key(*parts, version=version, fetch=fetch)
-        return self.storage.get_path(key, self._resolve_fetch(fetch))
+        return self.storage.resolve(key, fetch=self._resolve_fetch(fetch))
 
     def glob(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Sequence[Path]:
         version = self._resolve_version(version)
@@ -162,7 +162,7 @@ class Repository:
 
     def _load(self, func, key, fetch):
         fetch = self._resolve_fetch(fetch)
-        return self.storage.load(func, key, fetch=fetch)
+        return self.storage.read(func, key, fetch=fetch)
 
     def _split(self, path: Path, version: Version):
         # TODO: use bin-search?
@@ -189,7 +189,7 @@ class Repository:
         if version is None:
             version = self._version
         if version is None:
-            raise ValueError('The argument `version` must be provided.')
+            raise ValueError('The argument `version` must be provided')
         return version
 
     @staticmethod
