@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from .add import add
 from .blame import blame
 from .fetch import fetch
+from .init import init
 from .pull import pull, gather, PULL_MODES
 from .storage import init_storage
 from .update import update
@@ -11,6 +12,12 @@ from .update import update
 def entrypoint():
     parser = ArgumentParser()
     subparsers = parser.add_subparsers()
+
+    new = subparsers.add_parser('init')
+    new.set_defaults(callback=init)
+    new.add_argument('repository', default='.', nargs='?')
+    new.add_argument('-p', '--permissions')
+    new.add_argument('-g', '--group')
 
     new = subparsers.add_parser('add')
     new.set_defaults(callback=add)
@@ -45,7 +52,7 @@ def entrypoint():
     new.add_argument('path')
     new.add_argument('relative')
 
-    add_storage_functions(subparsers.add_parser('storage'))
+    # add_storage_functions(subparsers.add_parser('storage'))
 
     args = vars(parser.parse_args())
     if 'callback' not in args:

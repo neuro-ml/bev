@@ -1,0 +1,11 @@
+main:
+  storage:
+    - root: one
+    - root: two
+    - root: nested/folders
+
+  cache:
+    - root: cache
+
+meta:
+  hash: sha256

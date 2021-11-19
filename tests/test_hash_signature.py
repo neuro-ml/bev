@@ -6,6 +6,7 @@ from collections import Counter
 def test_hash_signature():
     for name in sorted(hashlib.algorithms_guaranteed):
         algo = getattr(hashlib, name)
+        assert hasattr(algo(), 'digest_size')
         try:
             params = list(inspect.signature(algo).parameters.values())
         except ValueError:

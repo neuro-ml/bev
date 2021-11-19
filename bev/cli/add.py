@@ -29,7 +29,7 @@ def save_tree(repo: Repository, tree: dict, destination: Path):
     # TODO: storage should allow writing directly from memory
     with open(tree_path, 'w') as file:
         json.dump(tree, file)
-    key = repo.storage.store(tree_path)
+    key = repo.storage.write(tree_path)
     os.remove(tree_path)
 
     with open(destination, 'w') as file:
@@ -40,7 +40,7 @@ def save_tree(repo: Repository, tree: dict, destination: Path):
 
 def add_file(repo: Repository, source: Path, destination: Optional[Path], keep: bool):
     validate_file(source)
-    key = repo.storage.store(source)
+    key = repo.storage.write(source)
 
     if destination is not None:
         assert is_hash(destination)
