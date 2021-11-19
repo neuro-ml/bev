@@ -15,7 +15,7 @@ def entrypoint():
 
     new = subparsers.add_parser('init')
     new.set_defaults(callback=init)
-    new.add_argument('repository')
+    new.add_argument('repository', default='.', nargs='?')
     new.add_argument('-p', '--permissions')
     new.add_argument('-g', '--group')
 

@@ -1,4 +1,5 @@
 import os
+import re
 import socket
 import warnings
 from itertools import chain
@@ -9,6 +10,8 @@ import importlib
 from paramiko.config import SSHConfig
 from pydantic import BaseModel, Extra, validator, root_validator
 from yaml import safe_load
+
+from connectome.interface.blocks import CacheIndex
 from connectome.storage import Storage, SSHLocation, Disk
 from connectome.storage.config import HashConfig
 
@@ -19,6 +22,53 @@ CONFIG = '.bev.yml'
 
 class ConfigError(Exception):
     pass
+
+
+class HostName:
+    key: str
+
+    def match(self, name) -> bool:
+        raise NotImplementedError
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        if isinstance(v, HostName):
+            return v
+        if isinstance(v, str):
+            return StrHostName(v)
+
+        assert isinstance(v, dict), f'Not a dict: {v}'
+        assert len(v) == 1
+        (k, v), = v.items()
+        for kls in HostName.__subclasses__():
+            if kls.key == k:
+                return kls(v)
+
+        raise ValueError(f'Invalid key "{k}" for hostname')
+
+
+class StrHostName(HostName):
+    key = 'str'
+
+    def __init__(self, value):
+        self.value = value
+
+    def match(self, name) -> bool:
+        return name == self.value
+
+
+class RegexHostName(HostName):
+    key = 'regex'
+
+    def __init__(self, pattern):
+        self.pattern = re.compile(pattern)
+
+    def match(self, name) -> bool:
+        return self.pattern.match(name) is not None
 
 
 class LocationConfig(BaseModel):
@@ -44,9 +94,15 @@ LocationConfigs = Tuple[LocationConfig, ...]
 class StorageConfig(BaseModel):
     name: str
     default: Dict[str, Any] = None
-    hostname: Tuple[str, ...] = None
+    hostname: Tuple[HostName, ...] = ()
     storage: LocationConfigs
     cache: LocationConfigs = ()
+
+    @validator('hostname', pre=True)
+    def from_single(cls, v):
+        if isinstance(v, (str, dict)):
+            v = v,
+        return v
 
     @validator('storage', 'cache', pre=True)
     def from_string(cls, v):
@@ -106,7 +162,7 @@ def load_config(config: Path) -> RepositoryConfig:
         return parse(config, safe_load(file))
 
 
-def build_storage(root: Path) -> Tuple[Storage, LocationConfigs]:
+def build_storage(root: Path) -> Tuple[Storage, CacheIndex]:
     config = load_config(root / CONFIG)
     meta = config.meta
 
@@ -132,8 +188,9 @@ def build_storage(root: Path) -> Tuple[Storage, LocationConfigs]:
                     'hostname': location.ssh} or location.ssh in ssh_config.get_hostnames())
             ]
 
+    cache = config.local.cache
     loc = order_func([Disk(location.root) for location in config.local.storage])
-    return Storage(loc, remote), config.local.cache
+    return Storage(loc, remote), CacheIndex([c.root for c in cache], [])
 
 
 def parse(root, config) -> RepositoryConfig:
@@ -190,8 +247,8 @@ def default_choose(meta: StorageConfig):
         return meta.name == os.environ[repo_key]
 
     node = socket.gethostname()
-    hosts = meta.hostname or [meta.name]
-    return any(h == node for h in hosts)
+    hosts = meta.hostname or [StrHostName(meta.name)]
+    return any(h.match(node) for h in hosts)
 
 
 def identity(x):
