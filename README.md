@@ -52,7 +52,7 @@ git add file.json.hash folder.hash image.png.hash
 git commit -m "added files"
 ```
 
-6. Access the files from python
+5. Access the files from python
 
 ```python
 import imageio
