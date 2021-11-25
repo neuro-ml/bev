@@ -4,15 +4,13 @@ import socket
 import warnings
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Sequence, Tuple, Callable, Any, Union
+from typing import Dict, Sequence, Tuple, Callable, Any, Union, NamedTuple
 import importlib
 
 from paramiko.config import SSHConfig
 from pydantic import BaseModel, Extra, validator, root_validator
 from yaml import safe_load
-
-from connectome.interface.blocks import CacheIndex
-from connectome.storage import Storage, SSHLocation, Disk
+from connectome.storage import Storage, SSHLocation, Disk, RemoteStorage
 from connectome.storage.config import HashConfig
 
 from .utils import PathLike
@@ -157,6 +155,11 @@ class RepositoryConfig(BaseModel):
         extra = Extra.forbid
 
 
+class CacheIndex(NamedTuple):
+    local: Sequence[PathLike]
+    remote: Sequence[RemoteStorage] = ()
+
+
 def load_config(config: Path) -> RepositoryConfig:
     with open(config, 'r') as file:
         return parse(config, safe_load(file))
@@ -190,7 +193,7 @@ def build_storage(root: Path) -> Tuple[Storage, CacheIndex]:
 
     cache = config.local.cache
     loc = order_func([Disk(location.root) for location in config.local.storage])
-    return Storage(loc, remote), CacheIndex([c.root for c in cache], [])
+    return Storage(loc, remote), CacheIndex([c.root for c in cache], remote)
 
 
 def parse(root, config) -> RepositoryConfig:
