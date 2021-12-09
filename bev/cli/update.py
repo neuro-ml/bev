@@ -15,7 +15,7 @@ def update(source: str, destination: str, keep: bool, overwrite: bool):
 
     repo = get_consistent_repo(['.', source, destination.parent])
     key = load_tree_key(destination)
-    mapping = repo.storage.load(load_tree, key)
+    mapping = repo.storage.read(load_tree, key)
 
     new = add_folder(repo, source, None, keep=True)
     common = set(new) & set(mapping)

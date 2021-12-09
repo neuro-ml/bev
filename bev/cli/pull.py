@@ -22,7 +22,7 @@ def pull(source: str, destination: str, mode: str):
 
     h = dispatch_hash(source)
     if isinstance(h, TreeHash):
-        mapping = repo.storage.load(load_tree, h.key)
+        mapping = repo.storage.read(load_tree, h.key)
 
         for file, value in tqdm(mapping.items()):
             file = destination / file
@@ -39,7 +39,7 @@ def save_hash(value, file, repo):
 
 
 PULL_MODES = {
-    'copy': lambda h, dst, repo: repo.storage.load(shutil.copyfile, h, dst),
+    'copy': lambda h, dst, repo: repo.storage.read(shutil.copyfile, h, dst),
     'hash': save_hash,
 }
 
