@@ -14,7 +14,7 @@ def _fetch(repo: Repository, path: Path):
     key = load_key(path)
     if key.startswith(('T:', 'tree:')):
         key = strip_tree(key)
-        keys = repo.storage.load(load_tree, key).values()
+        keys = repo.storage.read(load_tree, key).values()
     else:
         keys = [key]
 

@@ -19,6 +19,58 @@ pip install -e .
 pip install git+https://github.com/neuro-ml/bev.git
 ```
 
+# Getting started
+
+1. Choose a folder for your repository and create a basic config (`.bev.yml`):
+
+```yaml
+main:
+  storage: /path/to/storage/folder
+
+meta:
+  hash: sha256
+```
+
+2. Run `init`
+
+```shell
+bev init
+```
+
+3. Add files to bev
+
+```shell
+bev add /path/to/some/file.json .
+bev add /path/to/some/folder/ .
+bev add /path/to/some/image.png .
+```
+
+4. ... and to git
+
+```shell
+git add file.json.hash folder.hash image.png.hash
+git commit -m "added files"
+```
+
+5. Access the files from python
+
+```python
+import imageio
+from bev import Repository
+
+# `version` can be a commit hash or a git tag 
+repo = Repository('/path/to/repo', version='8a7fe6')
+image = imageio.imread(repo.resolve('image.png'))
+```
+
+### Advanced usage
+
+Here are some tutorials that cover more advanced configuration, including multiple storage locations and machines:
+
+1. [Create a repository](https://github.com/neuro-ml/bev/wiki/Creating-a-repository) - needed only at first time setup
+2. [Adding files](https://github.com/neuro-ml/bev/wiki/Adding-files)
+3. [Accessing files](https://github.com/neuro-ml/bev/wiki/Accessing-the-stored-files)
+
 # Why not DVC?
 
 [DVC](https://github.com/iterative/dvc) is a great project, and we took inspiration from it while designing `bev`.
@@ -36,11 +88,3 @@ However, out lab has several requirements that `DVC` doesn't meet:
 
 However, if these requirements are not essential to your project, you may want to stick with `DVC` - its community and
 tests coverage is much larger.
-
-# Getting started
-
-Here are some tutorials to quickly get you started:
-
-1. [Create a repository](https://github.com/neuro-ml/bev/wiki/Creating-a-repository) - needed only at first time setup
-2. [Adding files](https://github.com/neuro-ml/bev/wiki/Adding-files)
-3. [Accessing files](https://github.com/neuro-ml/bev/wiki/Accessing-the-stored-files)

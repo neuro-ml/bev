@@ -4,15 +4,13 @@ import socket
 import warnings
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Sequence, Tuple, Callable, Any, Union
+from typing import Dict, Sequence, Tuple, Callable, Any, Union, NamedTuple
 import importlib
 
 from paramiko.config import SSHConfig
 from pydantic import BaseModel, Extra, validator, root_validator
 from yaml import safe_load
-
-from connectome.interface.blocks import CacheIndex
-from connectome.storage import Storage, SSHLocation, Disk
+from connectome.storage import Storage, SSHLocation, Disk, RemoteStorage
 from connectome.storage.config import HashConfig
 
 from .utils import PathLike
@@ -157,9 +155,20 @@ class RepositoryConfig(BaseModel):
         extra = Extra.forbid
 
 
+class CacheIndex(NamedTuple):
+    local: Sequence[PathLike]
+    remote: Sequence[RemoteStorage] = ()
+
+
 def load_config(config: Path) -> RepositoryConfig:
     with open(config, 'r') as file:
         return parse(config, safe_load(file))
+
+
+def is_remove_available(location, config):
+    # TODO: better way of handling missing hosts
+    return location.ssh is not None and (config.lookup(location.ssh) != {
+        'hostname': location.ssh} or location.ssh in config.get_hostnames())
 
 
 def build_storage(root: Path) -> Tuple[Storage, CacheIndex]:
@@ -171,7 +180,7 @@ def build_storage(root: Path) -> Tuple[Storage, CacheIndex]:
         path, attr = meta.order.rsplit('.', 1)
         order_func = getattr(importlib.import_module(path), attr)
 
-    remote = []
+    remote_storage, remote_cache = [], []
     # filter only available hosts
     # TODO: move to config?
     config_path = Path('~/.ssh/config').expanduser()
@@ -180,17 +189,17 @@ def build_storage(root: Path) -> Tuple[Storage, CacheIndex]:
             ssh_config = SSHConfig()
             ssh_config.parse(f)
 
-            remote = [
-                SSHLocation(location.ssh, location.root)
-                for entry in config.remotes for location in entry.storage
-                # TODO: better way of handling missing hosts
-                if location.ssh is not None and (ssh_config.lookup(location.ssh) != {
-                    'hostname': location.ssh} or location.ssh in ssh_config.get_hostnames())
-            ]
+            for entry in config.remotes:
+                for location in entry.storage:
+                    if is_remove_available(location, ssh_config):
+                        remote_storage.append(SSHLocation(location.ssh, location.root))
 
-    cache = config.local.cache
+                for location in entry.cache:
+                    if is_remove_available(location, ssh_config):
+                        remote_cache.append(SSHLocation(location.ssh, location.root))
+
     loc = order_func([Disk(location.root) for location in config.local.storage])
-    return Storage(loc, remote), CacheIndex([c.root for c in cache], [])
+    return Storage(loc, remote_storage), CacheIndex([c.root for c in config.local.cache], remote_cache)
 
 
 def parse(root, config) -> RepositoryConfig:
