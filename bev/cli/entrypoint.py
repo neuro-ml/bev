@@ -21,8 +21,8 @@ def entrypoint():
 
     new = subparsers.add_parser('add')
     new.set_defaults(callback=add)
-    new.add_argument('source')
-    new.add_argument('destination')
+    new.add_argument('source', nargs='+', help='a list of files/folders to be added')
+    new.add_argument('destination', help='the final location of the files/folders')
     new.add_argument('-k', '--keep', default=False, action='store_true')
 
     new = subparsers.add_parser('fetch')
