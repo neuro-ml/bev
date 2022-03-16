@@ -4,8 +4,8 @@ import yaml
 
 from bev.config import find_repo_root, CONFIG, load_config
 from bev.utils import RepositoryNotFound
-from connectome.storage.config import DiskConfig, STORAGE_CONFIG_NAME, root_params
-from connectome.storage.utils import mkdir
+from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, root_params, StorageConfig
+from tarn.utils import mkdir
 
 
 def init(repository: str = '.', permissions: str = None, group: Union[int, str] = None):
@@ -29,7 +29,7 @@ def init_config(config, permissions, group):
         conf_path = storage_root / STORAGE_CONFIG_NAME
         if not conf_path.exists():
             with open(conf_path, 'w') as file:
-                yaml.safe_dump(DiskConfig(
+                yaml.safe_dump(StorageConfig(
                     hash=meta.hash, levels=[1, digest_size - 1]
                 ).dict(exclude_defaults=True), file)
 

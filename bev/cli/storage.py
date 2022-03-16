@@ -3,7 +3,7 @@ import hashlib
 import inspect
 from pathlib import Path
 
-from connectome.storage.config import init_storage as _init_storage
+from tarn.config import init_storage as _init_storage
 
 
 def init_storage():

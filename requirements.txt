@@ -2,5 +2,5 @@ wcmatch
 pyyaml
 paramiko
 tqdm
-connectome>=0.0.9<0.1.0
+tarn<0.1.0
 pydantic

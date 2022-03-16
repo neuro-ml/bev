@@ -10,8 +10,8 @@ import importlib
 from paramiko.config import SSHConfig
 from pydantic import BaseModel, Extra, validator, root_validator
 from yaml import safe_load
-from connectome.storage import Storage, SSHLocation, Disk, RemoteStorage
-from connectome.storage.config import HashConfig
+from tarn import Storage, SSHLocation, Disk, RemoteStorage
+from tarn.config import HashConfig
 
 from .utils import PathLike
 
@@ -199,7 +199,7 @@ def build_storage(root: Path) -> Tuple[Storage, CacheIndex]:
                         remote_cache.append(SSHLocation(location.ssh, location.root))
 
     loc = order_func([Disk(location.root) for location in config.local.storage])
-    return Storage(loc, remote_storage), CacheIndex([c.root for c in config.local.cache], remote_cache)
+    return Storage(loc, remote=remote_storage), CacheIndex([c.root for c in config.local.cache], remote_cache)
 
 
 def parse(root, config) -> RepositoryConfig:

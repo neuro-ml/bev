@@ -7,7 +7,7 @@ from bev.cli.add import add
 from bev.cli.fetch import fetch
 from bev.cli.init import init_config
 from bev.config import load_config
-from connectome.storage.config import root_params, load_config as load_storage_config
+from tarn.config import root_params, load_config as load_storage_config
 
 
 def test_fetch(data_root):
@@ -41,7 +41,7 @@ def test_init(tests_root, tmpdir):
             assert (folder / 'config.yml').exists()
             storage_config = load_storage_config(folder)
             assert storage_config.hash == config.meta.hash
-            assert storage_config.levels == (1, 31)
+            assert tuple(storage_config.levels) == (1, 31)
 
     finally:
         os.chdir(current)
