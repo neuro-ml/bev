@@ -19,25 +19,28 @@ def init(repository: str = '.', permissions: str = None, group: Union[int, str] 
 def init_config(config, permissions, group):
     local, meta = config.local, config.meta
     digest_size = meta.hash.build()().digest_size
-    permissions, group = get_root_params(local.storage + local.cache, permissions, group)
+    levels = local.storage + local.cache
+    permissions, group = get_root_params(levels, permissions, group)
 
-    for location in local.storage + local.cache:
-        storage_root = location.root
-        if not storage_root.exists():
-            mkdir(storage_root, permissions, group, parents=True)
+    for level in levels:
+        for location in level.locations:
+            storage_root = location.root
+            if not storage_root.exists():
+                mkdir(storage_root, permissions, group, parents=True)
 
-        conf_path = storage_root / STORAGE_CONFIG_NAME
-        if not conf_path.exists():
-            with open(conf_path, 'w') as file:
-                yaml.safe_dump(StorageConfig(
-                    hash=meta.hash, levels=[1, digest_size - 1]
-                ).dict(exclude_defaults=True), file)
+            conf_path = storage_root / STORAGE_CONFIG_NAME
+            if not conf_path.exists():
+                with open(conf_path, 'w') as file:
+                    yaml.safe_dump(StorageConfig(
+                        hash=meta.hash, levels=[1, digest_size - 1]
+                    ).dict(exclude_defaults=True), file)
 
 
-def get_root_params(entries, permissions, group):
-    for entry in entries:
-        if entry.root.exists():
-            return root_params(entry.root)
+def get_root_params(levels, permissions, group):
+    for level in levels:
+        for entry in level.locations:
+            if entry.root.exists():
+                return root_params(entry.root)
 
     if permissions is None:
         permissions = input('Folder permissions:')

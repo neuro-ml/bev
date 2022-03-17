@@ -1,0 +1,53 @@
+one:
+  hostname:
+    - one
+    - one-server
+    - regex: 'one-.*'
+
+  storage:
+    - locations:
+        - root: a
+          optional: true
+        - root: b
+      write: false
+    - locations:
+        - root: c
+        - root: d
+          optional: true
+      replicate: false
+
+  cache:
+    - locations:
+        - root: c1
+        - root: c2
+      write: true
+    - locations:
+        - root: c3
+        - root: c4
+
+two:
+  hostname:
+    - regex: '\d+-two'
+
+  storage:
+    - locations:
+        - root: e
+        - root: f
+      write: true
+    - locations:
+        - root: g
+        - root: h
+        - root: i
+      write: false
+
+  cache:
+    - locations:
+        - root: c5
+    - locations:
+        - root: c6
+        - root: c7
+        - root: c8
+      replicate: true
+
+meta:
+  fallback: two
