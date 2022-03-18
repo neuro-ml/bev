@@ -1,5 +1,6 @@
 import os
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -37,3 +38,22 @@ def tests_root():
 @pytest.fixture
 def data_root(tests_root):
     return tests_root / 'data'
+
+
+@pytest.fixture
+def temp_repo_factory():
+    @contextmanager
+    def factory():
+        with tempfile.TemporaryDirectory() as storage, tempfile.TemporaryDirectory() as repo:
+            storage = Path(storage) / 'storage'
+            repo = Path(repo)
+
+            # create config
+            with open(repo / '.bev.yml', 'w') as file:
+                # language=YAML
+                file.write('tests: {storage: [{root: %s}]}' % storage)
+
+            init_storage(StorageConfig(hash='blake2b', levels=[1, 63]), storage)
+            yield repo
+
+    return factory

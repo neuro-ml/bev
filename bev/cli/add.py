@@ -13,7 +13,7 @@ from ..hash import is_hash, to_hash
 
 
 def validate_file(path: Path):
-    assert path.is_file()
+    assert path.is_file(), path
     if is_hash(path):
         raise ValueError('You are trying to add a hash to the storage.')
 
@@ -105,14 +105,15 @@ def add(source: Union[PathLike, Sequence[PathLike]], destination: PathLike, keep
     repo = get_consistent_repo([context, dst_root, *sources_root])
 
     for source in sources:
-        if destination.is_dir():
-            destination /= to_hash(source).name
-        if not is_hash(destination):
-            destination = to_hash(destination)
-        if destination.exists():
-            raise FileExistsError(destination)
+        local_destination = destination
+        if local_destination.is_dir():
+            local_destination /= to_hash(source).name
+        if not is_hash(local_destination):
+            local_destination = to_hash(local_destination)
+        if local_destination.exists():
+            raise FileExistsError(local_destination)
 
         if source.is_dir():
-            add_folder(repo, source, destination, keep)
+            add_folder(repo, source, local_destination, keep)
         else:
-            add_file(repo, source, destination, keep)
+            add_file(repo, source, local_destination, keep)

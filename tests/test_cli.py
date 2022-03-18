@@ -16,7 +16,7 @@ def test_fetch(data_root):
     fetch([data_root / '4.png.hash'])
 
 
-def test_add(data_root):
+def test_add(temp_repo_factory, data_root, tests_root):
     with pytest.raises(FileNotFoundError):
         add('non-existent-file', data_root, False)
 
@@ -25,6 +25,16 @@ def test_add(data_root):
 
     with pytest.raises(FileNotFoundError):
         add([data_root / '4.png', data_root / 'images/1.png'], '/missing/nested/path/', False)
+
+    # add multiple files to a single to file
+    with pytest.raises(ValueError):
+        add([data_root / '4.png', data_root / 'images/1.png'], __file__, False)
+
+    with temp_repo_factory() as repo:
+        # just add multiple files
+        add([tests_root / 'conftest.py', tests_root / 'test_cli.py'], repo, True)
+        assert (repo / 'conftest.py.hash').exists()
+        assert (repo / 'test_cli.py.hash').exists()
 
 
 def test_init(tests_root, tmpdir):
