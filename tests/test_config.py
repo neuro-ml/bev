@@ -30,3 +30,11 @@ def test_parser(tests_root, subtests):
 def test_simplified(tests_root):
     assert load_config(tests_root / 'configs/single-full.yml') == load_config(
         tests_root / 'configs/single-simplified.yml')
+
+
+def test_default(tests_root):
+    config = load_config(tests_root / 'configs/full.yml')
+    default = config.local.default
+    assert default == {'optional': True}
+    for x in config.local.storage:
+        assert x.default == default

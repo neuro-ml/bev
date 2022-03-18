@@ -157,9 +157,14 @@ class StorageCluster(NoExtra):
             if isinstance(entry, (str, LocationConfig)):
                 entry = StorageLevelConfig(locations=entry, default=default)
             elif isinstance(entry, dict):
+                local_entry = entry.copy()
+                local_default = local_entry.pop('default', {}).copy()
+                local_default.update(default)
+                local_entry['default'] = local_default
+
                 try:
-                    entry = StorageLevelConfig(**entry)
-                except ValueError:
+                    entry = StorageLevelConfig(**local_entry)
+                except ValidationError:
                     entry = StorageLevelConfig(locations=entry, default=default)
 
             result.append(entry)
