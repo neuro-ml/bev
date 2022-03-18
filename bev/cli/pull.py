@@ -2,7 +2,7 @@ import shutil
 
 from pathlib import Path
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from ..shortcuts import get_current_repo
 from ..hash import is_hash, to_hash, from_hash, load_tree, dispatch_hash, TreeHash

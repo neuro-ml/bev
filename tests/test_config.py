@@ -2,7 +2,7 @@ from unittest import mock
 
 import pytest
 
-from bev.config import parse
+from bev.config import parse, load_config
 
 
 @pytest.mark.parametrize('name', ['first', 'second', 'third'])
@@ -19,3 +19,22 @@ def test_select_name(name):
         else:
             assert config.local.name == name
         assert len(config.remotes) == 1
+
+
+def test_parser(tests_root, subtests):
+    for file in tests_root.glob('configs/**/*.yml'):
+        with subtests.test(config=file.name):
+            load_config(file)
+
+
+def test_simplified(tests_root):
+    assert load_config(tests_root / 'configs/single-full.yml') == load_config(
+        tests_root / 'configs/single-simplified.yml')
+
+
+def test_default(tests_root):
+    config = load_config(tests_root / 'configs/full.yml')
+    default = config.local.default
+    assert default == {'optional': True}
+    for x in config.local.storage:
+        assert x.default == default

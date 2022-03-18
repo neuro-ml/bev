@@ -1,11 +1,12 @@
 import os
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 
 from bev.cli.add import add
-from connectome.storage.config import init_storage
+from tarn.config import init_storage, StorageConfig
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -20,7 +21,7 @@ def setup_config():
             # language=YAML
             file.write('tests: {storage: [{root: %s}]}' % storage)
 
-        init_storage(storage, algorithm={'name': 'blake2b', 'digest_size': 64}, levels=[1, 31, 32])
+        init_storage(StorageConfig(hash='blake2b', levels=[1, 63]), storage)
         add(data_root / 'images', data_root, True, data_root)
         add(data_root / '4.png', data_root, True, data_root)
         yield
@@ -37,3 +38,22 @@ def tests_root():
 @pytest.fixture
 def data_root(tests_root):
     return tests_root / 'data'
+
+
+@pytest.fixture
+def temp_repo_factory():
+    @contextmanager
+    def factory():
+        with tempfile.TemporaryDirectory() as storage, tempfile.TemporaryDirectory() as repo:
+            storage = Path(storage) / 'storage'
+            repo = Path(repo)
+
+            # create config
+            with open(repo / '.bev.yml', 'w') as file:
+                # language=YAML
+                file.write('tests: {storage: [{root: %s}]}' % storage)
+
+            init_storage(StorageConfig(hash='blake2b', levels=[1, 63]), storage)
+            yield repo
+
+    return factory

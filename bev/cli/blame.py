@@ -1,11 +1,11 @@
 from pathlib import Path
 from datetime import datetime
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from ..hash import from_hash, is_hash
 from ..shortcuts import get_current_repo
-from ..utils import call
+from ..utils import call_git
 
 
 def blame(path: Path, relative: str):
@@ -22,7 +22,7 @@ def blame(path: Path, relative: str):
     bar = tqdm()
     while True:
         idx += 1
-        output = call(f'git log -n 1 --skip {idx} --pretty=format:%H,%ct -- {path}', repo.root)
+        output = call_git(f'git log -n 1 --skip {idx} --pretty=format:%H,%ct -- {path}', repo.root, True)
         if not output:
             break
 
@@ -33,8 +33,8 @@ def blame(path: Path, relative: str):
         current = repo.load_tree(path, commit)
         if relative not in current or current[relative] != base:
             bar.close()
-            print(call(f"git log --format='%an <%ae> at %aD' {commit}^!", repo.root))
+            print(call_git(f"git log --format='%an <%ae> at %aD' {commit}^!", repo.root, True))
             return
 
     bar.close()
-    print(call(f"git log -n 1 --format='%an <%ae> at %aD' -- {path}", repo.root))
+    print(call_git(f"git log -n 1 --format='%an <%ae> at %aD' -- {path}", repo.root, True))

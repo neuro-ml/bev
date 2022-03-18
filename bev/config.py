@@ -1,17 +1,16 @@
 import os
 import re
 import socket
-import warnings
 from itertools import chain
 from pathlib import Path
 from typing import Dict, Sequence, Tuple, Callable, Any, Union, NamedTuple
 import importlib
 
 from paramiko.config import SSHConfig
-from pydantic import BaseModel, Extra, validator, root_validator
+from pydantic import BaseModel, Extra, validator, root_validator, ValidationError
 from yaml import safe_load
-from connectome.storage import Storage, SSHLocation, Disk, RemoteStorage
-from connectome.storage.config import HashConfig
+from tarn import Storage, SSHLocation, Disk, RemoteStorage, StorageLevel
+from tarn.config import HashConfig
 
 from .utils import PathLike
 
@@ -69,59 +68,111 @@ class RegexHostName(HostName):
         return self.pattern.match(name) is not None
 
 
-class LocationConfig(BaseModel):
-    root: Path
-    ssh: str = None
-
-    @root_validator(pre=True)
-    def resolve_deprecation(cls, values):
-        if 'host' in values:
-            assert 'ssh' not in values
-            warnings.warn('The name "host" has been renamed to "ssh"')
-            values['ssh'] = values.pop('host')
-
-        return values
-
+class NoExtra(BaseModel):
     class Config:
         extra = Extra.forbid
 
 
-LocationConfigs = Tuple[LocationConfig, ...]
+class LocationConfig(NoExtra):
+    root: Path
+    ssh: str = None
+    optional: bool = False
 
-
-class StorageConfig(BaseModel):
-    name: str
-    default: Dict[str, Any] = None
-    hostname: Tuple[HostName, ...] = ()
-    storage: LocationConfigs
-    cache: LocationConfigs = ()
-
-    @validator('hostname', pre=True)
-    def from_single(cls, v):
-        if isinstance(v, (str, dict)):
-            v = v,
+    @root_validator(pre=True)
+    def from_string(cls, v):
+        if isinstance(v, str):
+            return cls(root=v)
         return v
 
-    @validator('storage', 'cache', pre=True)
+
+class StorageLevelConfig(NoExtra):
+    default: Dict[str, Any] = None
+    locations: Sequence[LocationConfig]
+    write: bool = True
+    replicate: bool = True
+
+    @root_validator(pre=True)
+    def from_builtins(cls, v):
+        if isinstance(v, dict):
+            return v
+        return cls(locations=v)
+
+    @validator('default', pre=True, always=True)
+    def fill(cls, v):
+        if v is None:
+            return {}
+        return v
+
+    @validator('locations', pre=True)
     def from_string(cls, v):
         if isinstance(v, str):
             v = v,
         return v
 
-    @validator('storage', 'cache', each_item=True, pre=True)
+    @validator('locations', each_item=True, pre=True)
     def add_defaults(cls, v, values):
         default = (values['default'] or {}).copy()
         if isinstance(v, str):
             v = {'root': v}
-        assert isinstance(v, dict)
-        default.update(v)
-        return default
 
-    class Config:
-        extra = Extra.forbid
+        if default:
+            assert isinstance(v, dict), type(v)
+            default.update(v)
+            return default
+
+        return v
+
+    @validator('locations')
+    def to_tuple(cls, v):
+        return tuple(v)
 
 
-class ConfigMeta(BaseModel):
+class StorageCluster(NoExtra):
+    name: str
+    default: Dict[str, Any] = None
+    hostname: Sequence[HostName] = ()
+    storage: Sequence[StorageLevelConfig]
+    cache: Sequence[StorageLevelConfig] = ()
+
+    @validator('hostname', pre=True)
+    def from_single(cls, v):
+        if isinstance(v, (str, dict, HostName)):
+            v = v,
+        return v
+
+    @validator('storage', 'cache', pre=True)
+    def from_string(cls, v, values):
+        if isinstance(v, (str, dict, StorageLevelConfig, LocationConfig)):
+            v = v,
+
+        default = (values['default'] or {}).copy()
+        # first try to interpret the entire storage as a single level
+        try:
+            return StorageLevelConfig(locations=v, default=default),
+        except ValidationError:
+            pass
+
+        result = []
+        for entry in v:
+            if isinstance(entry, (str, LocationConfig)):
+                entry = StorageLevelConfig(locations=entry, default=default)
+            elif isinstance(entry, dict):
+                local_entry = entry.copy()
+                local_default = local_entry.pop('default', {}).copy()
+                local_default.update(default)
+                local_entry['default'] = local_default
+
+                try:
+                    entry = StorageLevelConfig(**local_entry)
+                except ValidationError:
+                    entry = StorageLevelConfig(locations=entry, default=default)
+
+            result.append(entry)
+
+        return tuple(result)
+
+
+class ConfigMeta(NoExtra):
     choose: str = None
     fallback: str = None
     order: str = None
@@ -133,30 +184,15 @@ class ConfigMeta(BaseModel):
             v = {'name': v}
         return v
 
-    @root_validator(pre=True)
-    def resolve_deprecation(cls, values):
-        if 'default' in values:
-            assert 'fallback' not in values
-            warnings.warn('The name "default" has been renamed to "fallback"')
-            values['fallback'] = values.pop('default')
 
-        return values
-
-    class Config:
-        extra = Extra.forbid
-
-
-class RepositoryConfig(BaseModel):
-    local: StorageConfig
-    remotes: Tuple[StorageConfig, ...]
+class RepositoryConfig(NoExtra):
+    local: StorageCluster
+    remotes: Sequence[StorageCluster]
     meta: ConfigMeta
 
-    class Config:
-        extra = Extra.forbid
 
-
-class CacheIndex(NamedTuple):
-    local: Sequence[PathLike]
+class CacheStorageIndex(NamedTuple):
+    local: Sequence[StorageLevelConfig]
     remote: Sequence[RemoteStorage] = ()
 
 
@@ -165,13 +201,13 @@ def load_config(config: Path) -> RepositoryConfig:
         return parse(config, safe_load(file))
 
 
-def is_remove_available(location, config):
+def is_remote_available(location, config):
     # TODO: better way of handling missing hosts
     return location.ssh is not None and (config.lookup(location.ssh) != {
         'hostname': location.ssh} or location.ssh in config.get_hostnames())
 
 
-def build_storage(root: Path) -> Tuple[Storage, CacheIndex]:
+def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
     config = load_config(root / CONFIG)
     meta = config.meta
 
@@ -190,16 +226,25 @@ def build_storage(root: Path) -> Tuple[Storage, CacheIndex]:
             ssh_config.parse(f)
 
             for entry in config.remotes:
-                for location in entry.storage:
-                    if is_remove_available(location, ssh_config):
-                        remote_storage.append(SSHLocation(location.ssh, location.root))
+                for level in entry.storage:
+                    for location in level.locations:
+                        if is_remote_available(location, ssh_config):
+                            remote_storage.append(SSHLocation(location.ssh, location.root))
 
-                for location in entry.cache:
-                    if is_remove_available(location, ssh_config):
-                        remote_cache.append(SSHLocation(location.ssh, location.root))
+                for level in entry.cache:
+                    for location in level.locations:
+                        if is_remote_available(location, ssh_config):
+                            remote_cache.append(SSHLocation(location.ssh, location.root))
 
-    loc = order_func([Disk(location.root) for location in config.local.storage])
-    return Storage(loc, remote_storage), CacheIndex([c.root for c in config.local.cache], remote_cache)
+    storage = [
+        StorageLevel(
+            order_func([Disk(location.root) for location in level.locations]),
+            write=level.write, replicate=level.replicate,
+        )
+        for level in _filter_levels(config.local.storage)
+    ]
+    return Storage(*storage, remote=remote_storage), CacheStorageIndex(
+        tuple(_filter_levels(config.local.cache)), remote_cache)
 
 
 def parse(root, config) -> RepositoryConfig:
@@ -217,10 +262,10 @@ def parse(root, config) -> RepositoryConfig:
             raise ConfigError('The key "name" is not available')
         entry = entry.copy()
         entry['name'] = name
-        entries[name] = StorageConfig(**entry)
+        entries[name] = StorageCluster(**entry)
 
     fallback = None
-    filter_func: Callable[[StorageConfig], bool] = default_choose
+    filter_func: Callable[[StorageCluster], bool] = default_choose
     if meta.choose is not None:
         path, attr = meta.choose.rsplit('.', 1)
         filter_func = getattr(importlib.import_module(path), attr)
@@ -231,15 +276,27 @@ def parse(root, config) -> RepositoryConfig:
 
     if len(entries) == 1:
         local, = entries.values()
-        remotes = []
+        remotes = ()
     else:
         name = choose_local(entries.values(), filter_func, fallback)
         if name is None:
             raise ConfigError(f'No matching entry in config {root}')
         local = entries.pop(name)
-        remotes = list(entries.values())
+        remotes = tuple(entries.values())
 
     return RepositoryConfig(local=local, remotes=remotes, meta=meta)
+
+
+def _filter_levels(levels):
+    for level in levels:
+        locations = [
+            x for x in level.locations
+            if not x.optional or x.root.exists()
+        ]
+        if locations:
+            level = level.copy()
+            level.locations = locations
+            yield level
 
 
 def choose_local(metas, func, default):
@@ -250,7 +307,7 @@ def choose_local(metas, func, default):
     return default
 
 
-def default_choose(meta: StorageConfig):
+def default_choose(meta: StorageCluster):
     repo_key = 'BEV__REPOSITORY'
     if repo_key in os.environ:
         return meta.name == os.environ[repo_key]
