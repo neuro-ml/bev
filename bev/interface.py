@@ -1,7 +1,6 @@
 import inspect
 import os
 import subprocess
-import warnings
 from functools import lru_cache
 from pathlib import Path
 from typing import Sequence, Union
@@ -36,12 +35,6 @@ class Repository:
         self.root = Path(*root)
         self.storage, self.cache = build_storage(self.root)
         self._fetch, self._version = fetch, version
-
-    @classmethod
-    def from_root(cls, *parts: PathLike):
-        warnings.warn(
-            'This classmethod is deprecated, call the constructor directly for the same behaviour', UserWarning)
-        return cls(*parts)
 
     @classmethod
     def from_here(cls, *relative: PathLike, fetch: bool = True, version: Version = None) -> 'Repository':

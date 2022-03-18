@@ -20,6 +20,12 @@ def test_add(data_root):
     with pytest.raises(FileNotFoundError):
         add('non-existent-file', data_root, False)
 
+    with pytest.raises(FileNotFoundError):
+        add(data_root / '4.png', '/missing/nested/path/', False)
+
+    with pytest.raises(FileNotFoundError):
+        add([data_root / '4.png', data_root / 'images/1.png'], '/missing/nested/path/', False)
+
 
 def test_init(tests_root, tmpdir):
     tmpdir = Path(tmpdir)

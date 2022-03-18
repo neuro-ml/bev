@@ -5,7 +5,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Optional, Union, Sequence
 
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from ..interface import Repository, PathLike
 from ..shortcuts import get_consistent_repo
@@ -79,7 +79,9 @@ def add(source: Union[PathLike, Sequence[PathLike]], destination: PathLike, keep
 
     destination = Path(destination)
     if len(sources) > 1:
-        if not destination.exists() or not destination.is_dir():
+        if not destination.exists():
+            raise FileNotFoundError('When adding multiple sources the destination must be an existing folder')
+        if not destination.is_dir():
             raise ValueError('When adding multiple sources the destination must be an existing folder')
         dst_root = destination
     else:
@@ -90,7 +92,7 @@ def add(source: Union[PathLike, Sequence[PathLike]], destination: PathLike, keep
                 dst_root = destination.parent
         else:
             if not destination.parent.exists() or not destination.parent.is_dir():
-                raise ValueError()
+                raise FileNotFoundError(f'The parent destination directory "{destination.parent}" does not exist')
 
             dst_root = destination.parent
 
