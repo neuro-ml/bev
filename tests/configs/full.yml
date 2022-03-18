@@ -29,6 +29,9 @@ two:
   hostname:
     - regex: '\d+-two'
 
+  default:
+    optional: true
+
   storage:
     - locations:
         - root: e

@@ -86,10 +86,10 @@ class LocationConfig(NoExtra):
 
 
 class StorageLevelConfig(NoExtra):
+    default: Dict[str, Any] = None
     locations: Sequence[LocationConfig]
     write: bool = True
     replicate: bool = True
-    default: Dict[str, Any] = None
 
     @root_validator(pre=True)
     def from_builtins(cls, v):
@@ -111,7 +111,7 @@ class StorageLevelConfig(NoExtra):
 
     @validator('locations', each_item=True, pre=True)
     def add_defaults(cls, v, values):
-        default = (values.get('default') or {}).copy()
+        default = (values['default'] or {}).copy()
         if isinstance(v, str):
             v = {'root': v}
 
