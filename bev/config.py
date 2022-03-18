@@ -244,7 +244,7 @@ def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
         for level in _filter_levels(config.local.storage)
     ]
     return Storage(*storage, remote=remote_storage), CacheStorageIndex(
-        tuple(_filter_levels(config.local.storage)), remote_cache)
+        tuple(_filter_levels(config.local.cache)), remote_cache)
 
 
 def parse(root, config) -> RepositoryConfig:
