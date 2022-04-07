@@ -3,6 +3,8 @@ import subprocess
 import shlex
 from typing import Union
 
+from .exceptions import *
+
 PathLike = Union[str, Path]
 
 
@@ -16,22 +18,6 @@ def call_git(command: str, cwd=None, wrap=False) -> str:
         if wrap:
             raise RuntimeError(e.stderr or e.stdout) from e
         raise
-
-
-class HashNotFound(Exception):
-    pass
-
-
-class RepositoryError(Exception):
-    pass
-
-
-class RepositoryNotFound(RepositoryError):
-    pass
-
-
-class InconsistentRepositories(RepositoryError):
-    pass
 
 
 # legacy

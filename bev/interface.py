@@ -1,19 +1,18 @@
 import inspect
 import os
-import subprocess
 from functools import lru_cache
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Sequence
 
+from tarn.digest import digest_file
 from wcmatch import glob
 
 from .config import CONFIG, build_storage, find_vcs_root
 from .hash import is_hash, to_hash, load_tree, load_tree_key, strip_tree, FileHash, InsideTreeHash, Key
-from .local import Local, LocalVersion
-from .utils import InconsistentRepositories, call_git, HashNotFound, PathLike, RepositoryNotFound
-
-CommittedVersion = str
-Version = Union[CommittedVersion, LocalVersion]
+from .vc import Version, CommittedVersion, VC, SubprocessGit
+from .local import Local
+from .exceptions import RepositoryNotFound, HashNotFound, InconsistentHash
+from .utils import InconsistentRepositories, PathLike
 
 
 class Repository:
@@ -25,19 +24,26 @@ class Repository:
     root:
         the path to the repository's root, i.e. the folder that contains `.bev.config`
     fetch: bool
-        whether to fetch files from remote locations when needed. Can be overridden in corresponding methods
+        whether to fetch files from remote locations when needed.
+        Can be overridden in corresponding methods
     version: str, Local
-        default value for data version. Can be either a string with a commit hash/tag or the `Local` object.
+        default value for data version. Can be either a string with a commit hash/tag or the `Local` object, which
+        means that the local (possibly uncommitted) version of the files will be used.
+        Can be overridden in corresponding methods
+    check: bool
+        default value for `resolve` move. If True - the file's hash will be additionally checked for consistency.
         Can be overridden in corresponding methods
     """
 
-    def __init__(self, *root: PathLike, fetch: bool = True, version: Version = None):
+    def __init__(self, *root: PathLike, fetch: bool = True, version: Version = None, check: bool = False):
         self.root = Path(*root)
         self.storage, self.cache = build_storage(self.root)
-        self._fetch, self._version = fetch, version
+        self.vc: VC = SubprocessGit(self.root)
+        self._fetch, self._version, self._check = fetch, version, check
 
     @classmethod
-    def from_here(cls, *relative: PathLike, fetch: bool = True, version: Version = None) -> 'Repository':
+    def from_here(cls, *relative: PathLike, fetch: bool = True, version: Version = None,
+                  check: bool = None) -> 'Repository':
         """
         Creates a repository with a path `relative` to the file in which this method is called.
 
@@ -46,7 +52,7 @@ class Repository:
         >>> repo = Repository.from_here('../../data')
         """
         file = Path(inspect.stack()[1].filename)
-        return cls(file.parent / Path(*relative), fetch=fetch, version=version)
+        return cls(file.parent / Path(*relative), fetch=fetch, version=version, check=check)
 
     @classmethod
     def from_vcs(cls, *parts: PathLike) -> 'Repository':
@@ -74,14 +80,55 @@ class Repository:
         if not (self.root / path).exists():
             raise FileNotFoundError(path)
 
-        return call_git(f'git log -n 1 --pretty=format:%H -- {path}', self.root)
+        return self.vc.log(str(path))
 
-    def resolve(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Path:
+    def resolve(self, *parts: PathLike, version: Version = None, fetch: bool = None, check: bool = None) -> Path:
+        """
+        Get the real path of a file in the repository
+
+        Parameters
+        ----------
+        parts: str, Path
+            the path to the file in the repository
+        fetch: bool
+            whether to fetch files from remote locations when needed
+        version: str, Local
+            the data version. Can be either a string with a commit hash/tag or the `Local` object, which
+            means that the local (possibly uncommitted) version of the files will be used
+        check: bool
+            default value for `resolve` move. If True - the file's hash will be additionally checked for consistency
+        """
+
+        def _resolve(path):
+            if check:
+                digest = digest_file(path, self.storage.algorithm)
+                if digest != key:
+                    raise InconsistentHash(
+                        f'The path "{Path(*parts)}" has a wrong hash: expected "{key}", actual "{digest}"'
+                    )
+
+            return path
+
         version = self._resolve_version(version)
+        check = self._resolve_check(check)
         key = self.get_key(*parts, version=version, fetch=fetch)
-        return self.storage.resolve(key, fetch=self._resolve_fetch(fetch))
+        return self.storage.read(_resolve, key, fetch=self._resolve_fetch(fetch))
 
     def glob(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Sequence[Path]:
+        """
+        Get all the paths in the repository that match a given pattern
+
+        Parameters
+        ----------
+        parts: str, Path
+            the pattern to match
+        fetch: bool
+            whether to fetch files from remote locations when needed
+        version: str, Local
+            the data version. Can be either a string with a commit hash/tag or the `Local` object, which
+            means that the local (possibly uncommitted) version of the files will be used
+        """
+
         version = self._resolve_version(version)
         h = self._split(Path(*parts), version)
         if not isinstance(h, InsideTreeHash):
@@ -142,16 +189,9 @@ class Repository:
             return load_tree_key(path)
 
     @lru_cache(None)
-    def _get_committed_hash(self, relative: Path, version: str):
-        assert isinstance(version, str), type(version)
-        relative = str(relative)
-        if not relative.startswith('./'):
-            relative = f'./{relative}'
-
-        try:
-            return strip_tree(call_git(f'git show {version}:{relative}', self.root))
-        except subprocess.CalledProcessError:
-            pass
+    def _get_committed_hash(self, relative: Path, version: CommittedVersion):
+        assert isinstance(version, CommittedVersion), type(version)
+        return self.vc.show(str(relative), version)
 
     def _load(self, func, key, fetch):
         fetch = self._resolve_fetch(fetch)
@@ -172,6 +212,11 @@ class Repository:
             raise HashNotFound(path)
 
         return FileHash(key, path, hash_path)
+
+    def _resolve_check(self, check):
+        if check is None:
+            return self._check
+        return check
 
     def _resolve_fetch(self, fetch):
         if fetch is None:

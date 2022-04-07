@@ -57,3 +57,9 @@ def temp_repo_factory():
             yield repo
 
     return factory
+
+
+@pytest.fixture
+def temp_repo(temp_repo_factory) -> Path:
+    with temp_repo_factory() as repo:
+        yield repo
