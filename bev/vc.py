@@ -78,7 +78,7 @@ class Dulwich(VC):
         return str((self.root / path).relative_to(self._repo.path)).encode()
 
     @property
-    def _repo(self) -> Repo:
+    def _repo(self):
         if self._real_repo is None:
             self._real_repo = Repo.discover(self.root)
         return self._real_repo
