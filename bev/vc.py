@@ -5,9 +5,9 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Union
 
-from dulwich.object_store import tree_lookup_path
-from dulwich.objects import Commit
-from dulwich.repo import Repo
+# from dulwich.object_store import tree_lookup_path
+# from dulwich.objects import Commit
+# from dulwich.repo import Repo
 
 from .local import LocalVersion
 
