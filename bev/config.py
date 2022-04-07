@@ -230,7 +230,7 @@ def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
                 for level in entry.storage:
                     for location in level.locations:
                         if is_remote_available(location, ssh_config):
-                            remote_storage.append(SSHLocation(location.ssh, location.root))
+                            remote_storage.append(SSHLocation(location.ssh, location.root, optional=location.optional))
 
                 for level in entry.cache:
                     for location in level.locations:
