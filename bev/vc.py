@@ -20,7 +20,7 @@ class VC:
         self.root = root
 
     @abstractmethod
-    def show(self, relative: str, version: CommittedVersion) -> str:
+    def show(self, relative: str, version: CommittedVersion) -> Union[str, None]:
         pass
 
     @abstractmethod
@@ -30,10 +30,13 @@ class VC:
 
 class SubprocessGit(VC):
     def show(self, relative: str, version: CommittedVersion) -> str:
+        if not relative.startswith('./'):
+            relative = f'./{relative}'
+
         with suppress(subprocess.CalledProcessError):
             return self._call_git(f'git show {version}:{relative}', self.root)
 
-    def log(self, relative: str, skip: int = 0) -> str:
+    def log(self, relative: str, skip: int = 0) -> Union[str, None]:
         if skip == 0:
             skip = ''
         else:
