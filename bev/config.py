@@ -3,7 +3,7 @@ import re
 import socket
 from itertools import chain
 from pathlib import Path
-from typing import Dict, Sequence, Tuple, Callable, Any, Union, NamedTuple
+from typing import Dict, Sequence, Tuple, Callable, Any, Union, NamedTuple, Optional
 import importlib
 
 from paramiko.config import SSHConfig
@@ -90,6 +90,7 @@ class StorageLevelConfig(NoExtra):
     locations: Sequence[LocationConfig]
     write: bool = True
     replicate: bool = True
+    name: Optional[str] = None
 
     @root_validator(pre=True)
     def from_builtins(cls, v):
@@ -229,17 +230,17 @@ def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
                 for level in entry.storage:
                     for location in level.locations:
                         if is_remote_available(location, ssh_config):
-                            remote_storage.append(SSHLocation(location.ssh, location.root))
+                            remote_storage.append(SSHLocation(location.ssh, location.root, optional=location.optional))
 
                 for level in entry.cache:
                     for location in level.locations:
                         if is_remote_available(location, ssh_config):
-                            remote_cache.append(SSHLocation(location.ssh, location.root))
+                            remote_cache.append(SSHLocation(location.ssh, location.root, optional=location.optional))
 
     storage = [
         StorageLevel(
             order_func([Disk(location.root) for location in level.locations]),
-            write=level.write, replicate=level.replicate,
+            write=level.write, replicate=level.replicate, name=level.name,
         )
         for level in _filter_levels(config.local.storage)
     ]
