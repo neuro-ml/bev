@@ -162,6 +162,7 @@ class Repository:
     def load_tree(self, path: PathLike, version: Version = None, fetch: bool = None) -> dict:
         version = self._resolve_version(version)
         key = self._get_hash(Path(path), version)
+        key = strip_tree(key)
         if key is None:
             raise HashNotFound(path)
         return self._get_tree(key, version, fetch)

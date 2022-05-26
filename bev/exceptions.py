@@ -20,3 +20,7 @@ class RepositoryNotFound(RepositoryError):
 
 class InconsistentRepositories(RepositoryError):
     pass
+
+
+class ConfigError(Exception):
+    pass
