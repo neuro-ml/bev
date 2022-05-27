@@ -41,8 +41,5 @@ class StrHostName(HostName):
 class RegexHostName(HostName):
     key = 'regex'
 
-    def __init__(self, value):
-        super().__init__(re.compile(value))
-
     def match(self, name) -> bool:
-        return self.value.match(name) is not None
+        return re.match(self.value, name) is not None
