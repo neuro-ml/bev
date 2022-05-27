@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from ruamel_yaml import safe_load
+from yaml import safe_load
 
 from bev.config import parse, load_config
 from bev.config.parse import _parse
