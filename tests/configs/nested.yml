@@ -1,0 +1,6 @@
+own-entry:
+  storage: own
+
+meta:
+  include:
+    - file: 'third.yml'
