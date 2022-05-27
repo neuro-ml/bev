@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Union, Tuple
 
 from yaml import safe_load
 
@@ -10,7 +11,7 @@ class Include:
     def __init__(self, value):
         self.value = value
 
-    def read(self) -> dict:
+    def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], dict]:
         raise NotImplementedError
 
     @classmethod
@@ -36,6 +37,19 @@ class Include:
 class FileInclude(Include):
     key = 'file'
 
-    def read(self) -> dict:
-        with open(Path(self.value).expanduser(), 'r') as file:
-            return safe_load(file)
+    def __init__(self, value):
+        super().__init__(Path(value).expanduser())
+
+    def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], dict]:
+        path = self.value
+        if not path.is_absolute():
+            if parent is None:
+                raise ValueError(
+                    f"Can't read a config {path}: the path is relative and the parent "
+                    f"doesn't have a well-defined disk location."
+                )
+
+            path = parent.parent / path
+
+        with open(path, 'r') as file:
+            return path, safe_load(file)

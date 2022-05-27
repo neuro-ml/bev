@@ -61,7 +61,7 @@ def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
 
 
 def parse(root, config) -> RepositoryConfig:
-    meta, entries = _parse(root, config)
+    meta, entries = _parse(root, config, root)
 
     fallback = None
     filter_func: Callable[[StorageCluster], bool] = default_choose
@@ -86,9 +86,9 @@ def parse(root, config) -> RepositoryConfig:
     return RepositoryConfig(local=local, remotes=remotes, meta=meta)
 
 
-def _parse(root, config):
+def _parse(name, config, root):
     if not isinstance(config, dict):
-        raise ConfigError(f'{root}: The config must be a dict')
+        raise ConfigError(f'{name}: The config must be a dict')
 
     config = config.copy()
     meta = ConfigMeta.parse_obj(config.pop('meta', {}))
@@ -98,9 +98,9 @@ def _parse(root, config):
         if isinstance(entry, str):
             entry = {'storage': entry}
         if not isinstance(entry, dict):
-            raise ConfigError(f'{root}: Each config entry must be either a dict or a string')
+            raise ConfigError(f'{name}: Each config entry must be either a dict or a string')
         if 'name' in entry:
-            raise ConfigError(f'{root}: The key "name" is not available')
+            raise ConfigError(f'{name}: The key "name" is not available')
         entry = entry.copy()
         entry['name'] = name
         entries[name] = StorageCluster(**entry)
@@ -108,10 +108,11 @@ def _parse(root, config):
     # parse parents
     for parent in meta.include:
         # TODO: don't just discard the parent meta
-        _, items = _parse(parent.value, parent.read())
+        parent_root, parent_config = parent.read(root)
+        _, items = _parse(parent.value, parent_config, parent_root)
         common = set(items) & set(entries)
         if common:
-            raise ConfigError(f'{root}: Trying to override the names {common} from parent config {parent.value}')
+            raise ConfigError(f'{name}: Trying to override the names {common} from parent config {parent.value}')
 
         entries.update(items)
 
