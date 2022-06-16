@@ -1,8 +1,9 @@
 import inspect
 import os
+import warnings
 from functools import lru_cache
 from pathlib import Path
-from typing import Sequence
+from typing import Sequence, Union
 
 from tarn.digest import digest_file
 from wcmatch import glob
@@ -37,6 +38,7 @@ class Repository:
 
     def __init__(self, *root: PathLike, fetch: bool = True, version: Version = None, check: bool = False):
         self.root = Path(*root)
+        self.prefix = Path()
         self.storage, self.cache = build_storage(self.root)
         self.vc: VC = SubprocessGit(self.root)
         self._fetch, self._version, self._check = fetch, version, check
@@ -70,10 +72,11 @@ class Repository:
 
     @property
     def current_version(self) -> CommittedVersion:
+        warnings.warn('This property is deprecated, use `latest_version()` instead', DeprecationWarning)
         return self.latest_version()
 
     def latest_version(self, path: PathLike = '.') -> CommittedVersion:
-        path = Path(path)
+        path = self._normalize_relative(path)
         if not (self.root / path).exists() and not is_hash(path):
             path = to_hash(path)
 
@@ -109,9 +112,10 @@ class Repository:
 
             return path
 
+        relative = self._normalize_relative(*parts)
         version = self._resolve_version(version)
         check = self._resolve_check(check)
-        key = self.get_key(*parts, version=version, fetch=fetch)
+        key = self.get_key(relative, version=version, fetch=fetch)
         return self.storage.read(_resolve, key, fetch=self._resolve_fetch(fetch))
 
     def glob(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Sequence[Path]:
@@ -128,9 +132,9 @@ class Repository:
             the data version. Can be either a string with a commit hash/tag or the `Local` object, which
             means that the local (possibly uncommitted) version of the files will be used
         """
-
+        relative = self._normalize_relative(*parts)
         version = self._resolve_version(version)
-        h = self._split(Path(*parts), version)
+        h = self._split(relative, version)
         if not isinstance(h, InsideTreeHash):
             raise ValueError('`glob` is only applicable to tree hashes')
 
@@ -143,7 +147,7 @@ class Repository:
     # TODO: cache this based on path parents
     def get_key(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Key:
         version = self._resolve_version(version)
-        path = Path(*parts)
+        path = self._normalize_relative(*parts)
         h = self._split(path, version)
         if isinstance(h, FileHash):
             return h.key
@@ -160,6 +164,7 @@ class Repository:
         return tree[relative]
 
     def load_tree(self, path: PathLike, version: Version = None, fetch: bool = None) -> dict:
+        path = self._normalize_relative(path)
         version = self._resolve_version(version)
         key = self._get_hash(Path(path), version)
         key = strip_tree(key)
@@ -167,7 +172,22 @@ class Repository:
             raise HashNotFound(path)
         return self._get_tree(key, version, fetch)
 
-    # internal logic
+    # navigation
+
+    def __truediv__(self, other: Union[str, Path]):
+        other = Path(other)
+        if other.is_absolute():
+            raise ValueError('Only relative paths are supported')
+
+        child = Repository(self.root, fetch=self._fetch, version=self._version, check=self._check)
+        # FIXME
+        child.prefix = self.prefix / other
+        return child
+
+        # internal logic
+
+    def _normalize_relative(self, *parts):
+        return self.prefix / Path(*parts)
 
     def _get_tree(self, key, version, fetch):
         # we need the version here, because we want to cache only a committed tree

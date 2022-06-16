@@ -16,7 +16,7 @@ def blame(path: Path, relative: str):
     folder = path
     if is_hash(folder):
         folder = from_hash(folder)
-    base = repo.get_key(folder, relative, version=repo.current_version)
+    base = repo.get_key(folder, relative, version=repo.latest_version())
 
     idx = 0
     bar = tqdm()
