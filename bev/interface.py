@@ -201,7 +201,11 @@ class Repository:
         child.prefix = self.prefix / other
         return child
 
-        # internal logic
+    @property
+    def path(self):
+        return self.root / self.prefix
+
+    # internal logic
 
     def _normalize_relative(self, *parts):
         return self.prefix / Path(*parts)
