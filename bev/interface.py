@@ -75,15 +75,22 @@ class Repository:
         warnings.warn('This property is deprecated, use `latest_version()` instead', DeprecationWarning)
         return self.latest_version()
 
-    def latest_version(self, path: PathLike = '.') -> CommittedVersion:
+    def latest_version(self, path: PathLike = '.', *, default=inspect.Parameter.empty) -> CommittedVersion:
+        """
+        Get the last commit given the relative `path`.
+        """
         path = self._normalize_relative(path)
         if not (self.root / path).exists() and not is_hash(path):
             path = to_hash(path)
 
-        if not (self.root / path).exists():
-            raise FileNotFoundError(path)
+        version = self.vc.log(str(path))
+        if version is None:
+            if default is inspect.Parameter.empty:
+                raise FileNotFoundError(f'The path "{path}" is not present in any commit')
 
-        return self.vc.log(str(path))
+            return default
+
+        return version
 
     def resolve(self, *parts: PathLike, version: Version = None, fetch: bool = None, check: bool = None) -> Path:
         """
@@ -145,10 +152,17 @@ class Repository:
         return [h.root / file for file in glob.globfilter(files, pattern, flags=glob.GLOBSTAR)]
 
     # TODO: cache this based on path parents
-    def get_key(self, *parts: PathLike, version: Version = None, fetch: bool = None) -> Key:
+    def get_key(self, *parts: PathLike, version: Version = None, fetch: bool = None,
+                error: bool = True) -> Union[Key, None]:
         version = self._resolve_version(version)
         path = self._normalize_relative(*parts)
-        h = self._split(path, version)
+        try:
+            h = self._split(path, version)
+        except HashNotFound:
+            if error:
+                raise
+            return None
+
         if isinstance(h, FileHash):
             return h.key
 
@@ -159,7 +173,9 @@ class Repository:
             if relative in self._expand_folders(tree):
                 raise HashNotFound(f'"{str(path)}" is a folder inside a tree hash')
 
-            raise HashNotFound(str(path))
+            if error:
+                raise HashNotFound(str(path))
+            return None
 
         return tree[relative]
 
@@ -167,9 +183,10 @@ class Repository:
         path = self._normalize_relative(path)
         version = self._resolve_version(version)
         key = self._get_hash(Path(path), version)
-        key = strip_tree(key)
         if key is None:
             raise HashNotFound(path)
+
+        key = strip_tree(key)
         return self._get_tree(key, version, fetch)
 
     # navigation
