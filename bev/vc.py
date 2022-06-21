@@ -47,10 +47,11 @@ class SubprocessGit(VC):
 
         try:
             result = self._call_git(f'git log -n 1 {skip} --pretty=format:%H -- {relative}', self.root)
-        except subprocess.CalledProcessError as e:
-            raise FileNotFoundError(relative) from e
-        if not result:
-            raise FileNotFoundError(relative)
+            if not result:
+                result = None
+        except subprocess.CalledProcessError:
+            return
+
         return result
 
     @staticmethod
