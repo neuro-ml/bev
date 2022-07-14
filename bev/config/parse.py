@@ -2,9 +2,8 @@ from pathlib import Path
 from typing import Sequence, Tuple, Callable, NamedTuple
 import importlib
 
-from paramiko.config import SSHConfig
 from yaml import safe_load
-from tarn import Storage, SSHLocation, Disk, RemoteStorage
+from tarn import Storage, Disk, RemoteStorage
 
 from .base import StorageLevelConfig, RepositoryConfig, ConfigMeta, StorageCluster
 from .utils import CONFIG, identity, _filter_levels, choose_local, default_choose, wrap_levels
@@ -21,12 +20,6 @@ def load_config(config: Path) -> RepositoryConfig:
         return parse(config, safe_load(file))
 
 
-def is_remote_available(location, config):
-    # TODO: better way of handling missing hosts
-    return location.ssh is not None and (config.lookup(location.ssh) != {
-        'hostname': location.ssh} or location.ssh in config.get_hostnames())
-
-
 def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
     config = load_config(root / CONFIG)
     meta = config.meta
@@ -36,25 +29,16 @@ def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
         path, attr = meta.order.rsplit('.', 1)
         order_func = getattr(importlib.import_module(path), attr)
 
+    # filter only available remotes
     remote_storage, remote_cache = [], []
-    # filter only available hosts
-    # TODO: move to config?
-    config_path = Path('~/.ssh/config').expanduser()
-    if config_path.exists():
-        with open(config_path) as f:
-            ssh_config = SSHConfig()
-            ssh_config.parse(f)
-
-            for entry in config.remotes:
-                for level in entry.storage:
-                    for location in level.locations:
-                        if is_remote_available(location, ssh_config):
-                            remote_storage.append(SSHLocation(location.ssh, location.root, optional=location.optional))
-
-                for level in entry.cache:
-                    for location in level.locations:
-                        if is_remote_available(location, ssh_config):
-                            remote_cache.append(SSHLocation(location.ssh, location.root, optional=location.optional))
+    for entry in config.remotes:
+        for container, levels in zip((remote_storage, remote_cache), (entry.storage, entry.cache)):
+            for level in levels:
+                for location in level.locations:
+                    for remote in location.remote:
+                        remote = remote.build(location.root, location.optional)
+                        if remote is not None:
+                            container.append(remote)
 
     return Storage(*wrap_levels(config.local.storage, Disk, order_func), remote=remote_storage), CacheStorageIndex(
         tuple(_filter_levels(config.local.cache)), remote_cache)
@@ -109,6 +93,11 @@ def _parse(name, config, root):
     for parent in meta.include:
         # TODO: don't just discard the parent meta
         parent_root, parent_config = parent.read(root)
+        if parent_config is None:
+            if parent.optional:
+                continue
+            raise ConfigError(f'Parent config "{parent.value}" not found')
+
         _, items = _parse(parent.value, parent_config, parent_root)
         common = set(items) & set(entries)
         if common:

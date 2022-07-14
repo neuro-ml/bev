@@ -9,10 +9,11 @@ class Include:
     # TODO: not safe
     key: str
 
-    def __init__(self, value):
+    def __init__(self, value, optional: bool):
         self.value = value
+        self.optional = optional
 
-    def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], dict]:
+    def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], Union[dict, None]]:
         raise NotImplementedError
 
     @classmethod
@@ -25,12 +26,13 @@ class Include:
             return v
 
         assert isinstance(v, dict), f'Not a dict: {v}'
+        optional = v.pop('optional', False)
         assert len(v) == 1
         (k, v), = v.items()
         # TODO: not safe
         for kls in Include.__subclasses__():
             if kls.key == k:
-                return kls(v)
+                return kls(v, optional)
 
         raise ValueError(f'Invalid key "{k}" for hostname')
 
@@ -38,10 +40,10 @@ class Include:
 class FileInclude(Include):
     key = 'file'
 
-    def __init__(self, value):
-        super().__init__(Path(value).expanduser())
+    def __init__(self, value, optional):
+        super().__init__(Path(value).expanduser(), optional)
 
-    def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], dict]:
+    def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], Union[dict, None]]:
         path = self.value
         if not path.is_absolute():
             if parent is None:
@@ -52,17 +54,20 @@ class FileInclude(Include):
 
             path = parent.parent / path
 
-        with open(path, 'r') as file:
-            return path, safe_load(file)
+        if path.exists():
+            with open(path, 'r') as file:
+                return path, safe_load(file)
+
+        return None, None
 
 
 class ModuleInclude(Include):
     key = 'module'
 
-    def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], dict]:
+    def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], Union[dict, None]]:
         path = self._find(self.value)
         if path is None:
-            raise ValueError(f'The module or file "{self.value}" is not found')
+            return None, None
 
         with open(path, 'r') as file:
             return path, safe_load(file)
