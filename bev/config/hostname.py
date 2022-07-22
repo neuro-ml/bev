@@ -1,9 +1,10 @@
 import re
 
+from .registry import register, find, add_type
 
+
+@add_type
 class HostName:
-    key: str
-
     def __init__(self, value):
         self.value = value
 
@@ -22,24 +23,19 @@ class HostName:
             return StrHostName(v)
 
         assert isinstance(v, dict), f'Not a dict: {v}'
-        assert len(v) == 1
+        assert len(v) == 1, v
         (k, v), = v.items()
-        for kls in HostName.__subclasses__():
-            if kls.key == k:
-                return kls(v)
 
-        raise ValueError(f'Invalid key "{k}" for hostname')
+        return find(HostName, k)(v)
 
 
+@register('str')
 class StrHostName(HostName):
-    key = 'str'
-
     def match(self, name) -> bool:
         return name == self.value
 
 
+@register('regex')
 class RegexHostName(HostName):
-    key = 'regex'
-
     def match(self, name) -> bool:
         return re.match(self.value, name) is not None

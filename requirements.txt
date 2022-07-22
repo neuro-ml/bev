@@ -2,5 +2,6 @@ wcmatch
 pyyaml
 paramiko
 tqdm
-tarn>=0.0.3,<0.1.0
+tarn>=0.1.0,<1.0.0
 pydantic
+pluggy

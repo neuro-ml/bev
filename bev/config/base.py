@@ -1,21 +1,18 @@
 from pathlib import Path
 from typing import Dict, Sequence, Any, Union, Optional
 
-from pydantic import BaseModel, Extra, validator, root_validator, ValidationError
+from pydantic import validator, root_validator, ValidationError
 from tarn.config import HashConfig
 
 from .hostname import HostName
 from .include import Include
-
-
-class NoExtra(BaseModel):
-    class Config:
-        extra = Extra.forbid
+from .remote import RemoteConfig, NoExtra
+from .registry import find
 
 
 class LocationConfig(NoExtra):
-    root: Path
-    ssh: str = None
+    root: Path = None
+    remote: Sequence[RemoteConfig] = ()
     optional: bool = False
 
     @root_validator(pre=True)
@@ -23,6 +20,40 @@ class LocationConfig(NoExtra):
         if isinstance(v, str):
             return cls(root=v)
         return v
+
+    @root_validator(pre=True)
+    def gather_remote(cls, values):
+        values = values.copy()
+        remote = list(values.pop('remote', []))
+        for key in list(values):
+            if key not in ['root', 'optional']:
+                remote.append({key: values.pop(key)})
+
+        values['remote'] = tuple(remote)
+        return values
+
+    @validator('remote', pre=True)
+    def from_single(cls, v):
+        if isinstance(v, (str, dict, RemoteConfig)):
+            v = v,
+
+        return list(map(cls.parse_entry, v))
+
+    @staticmethod
+    def parse_entry(entry):
+        if isinstance(entry, RemoteConfig):
+            return entry
+
+        assert isinstance(entry, dict), f'Not a dict: {entry}'
+        assert len(entry) == 1, entry
+        (k, entry), = entry.items()
+        if isinstance(entry, RemoteConfig):
+            return entry
+
+        kls = find(RemoteConfig, k)
+        if isinstance(entry, str):
+            return kls.from_string(entry)
+        return kls.parse_obj(entry)
 
 
 class StorageLevelConfig(NoExtra):
