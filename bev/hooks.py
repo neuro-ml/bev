@@ -1,6 +1,7 @@
 import pluggy
 
-from .. import hookspecs
+from . import hookspecs
+from .config import *
 
 manager = pluggy.PluginManager('bev')
 manager.add_hookspecs(hookspecs)

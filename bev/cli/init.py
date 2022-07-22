@@ -18,9 +18,10 @@ def init(repository: str = '.', permissions: str = None, group: Union[int, str] 
 
 def init_config(config, permissions, group):
     local, meta = config.local, config.meta
-    digest_size = meta.hash.build()().digest_size
-    levels = local.storage + local.cache
-    permissions, group = get_root_params(levels, permissions, group)
+    if meta.hash is None:
+        raise ValueError('The config\'s `meta` must contain a `hash` key')
+
+    levels = list(local.storage) + list(local.cache)
 
     for level in levels:
         for location in level.locations:
@@ -31,9 +32,7 @@ def init_config(config, permissions, group):
             conf_path = storage_root / STORAGE_CONFIG_NAME
             if not conf_path.exists():
                 with open(conf_path, 'w') as file:
-                    yaml.safe_dump(StorageConfig(
-                        hash=meta.hash, levels=[1, digest_size - 1]
-                    ).dict(exclude_defaults=True), file)
+                    yaml.safe_dump(StorageConfig(hash=meta.hash).dict(exclude_defaults=True), file)
 
 
 def get_root_params(levels, permissions, group):
