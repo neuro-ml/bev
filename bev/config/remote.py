@@ -15,8 +15,6 @@ class NoExtra(BaseModel):
 
 @add_type
 class RemoteConfig(NoExtra):
-    _key: str
-
     @classmethod
     def from_string(cls, v):
         raise NotImplementedError

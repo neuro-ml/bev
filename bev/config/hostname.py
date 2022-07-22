@@ -5,8 +5,6 @@ from .registry import register, find, add_type
 
 @add_type
 class HostName:
-    key: str
-
     def __init__(self, value):
         self.value = value
 

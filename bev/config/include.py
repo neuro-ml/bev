@@ -9,9 +9,6 @@ from .registry import register, find, add_type
 
 @add_type
 class Include:
-    # TODO: not safe
-    key: str
-
     def __init__(self, value, optional: bool):
         self.value = value
         self.optional = optional
