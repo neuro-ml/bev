@@ -4,7 +4,10 @@ from typing import Union, Tuple
 
 from yaml import safe_load
 
+from .registry import register, find, add_type
 
+
+@add_type
 class Include:
     # TODO: not safe
     key: str
@@ -27,19 +30,14 @@ class Include:
 
         assert isinstance(v, dict), f'Not a dict: {v}'
         optional = v.pop('optional', False)
-        assert len(v) == 1
+        assert len(v) == 1, v
         (k, v), = v.items()
-        # TODO: not safe
-        for kls in Include.__subclasses__():
-            if kls.key == k:
-                return kls(v, optional)
 
-        raise ValueError(f'Invalid key "{k}" for hostname')
+        return find(Include, k)(v, optional)
 
 
+@register('file')
 class FileInclude(Include):
-    key = 'file'
-
     def __init__(self, value, optional):
         super().__init__(Path(value).expanduser(), optional)
 
@@ -61,9 +59,8 @@ class FileInclude(Include):
         return None, None
 
 
+@register('module')
 class ModuleInclude(Include):
-    key = 'module'
-
     def read(self, parent: Union[Path, None]) -> Tuple[Union[Path, None], Union[dict, None]]:
         path = self._find(self.value)
         if path is None:

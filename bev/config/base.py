@@ -7,6 +7,7 @@ from tarn.config import HashConfig
 from .hostname import HostName
 from .include import Include
 from .remote import RemoteConfig, NoExtra
+from .registry import find
 
 
 class LocationConfig(NoExtra):
@@ -44,18 +45,15 @@ class LocationConfig(NoExtra):
             return entry
 
         assert isinstance(entry, dict), f'Not a dict: {entry}'
-        assert len(entry) == 1
+        assert len(entry) == 1, entry
         (k, entry), = entry.items()
         if isinstance(entry, RemoteConfig):
             return entry
 
-        for kls in RemoteConfig.__subclasses__():
-            if kls._key == k:
-                if isinstance(entry, str):
-                    return kls.from_string(entry)
-                return kls.parse_obj(entry)
-
-        raise ValueError(f'Invalid key "{k}" for remote config')
+        kls = find(RemoteConfig, k)
+        if isinstance(entry, str):
+            return kls.from_string(entry)
+        return kls.parse_obj(entry)
 
 
 class StorageLevelConfig(NoExtra):

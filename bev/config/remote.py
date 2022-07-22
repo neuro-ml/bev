@@ -3,8 +3,9 @@ from typing import Union
 
 from paramiko.config import SSHConfig
 from pydantic import BaseModel, Extra
-
 from tarn import SSHLocation, RemoteStorage, HTTPLocation
+
+from .registry import register, add_type
 
 
 class NoExtra(BaseModel):
@@ -12,6 +13,7 @@ class NoExtra(BaseModel):
         extra = Extra.forbid
 
 
+@add_type
 class RemoteConfig(NoExtra):
     _key: str
 
@@ -23,8 +25,8 @@ class RemoteConfig(NoExtra):
         raise NotImplementedError
 
 
+@register('ssh')
 class SHHRemote(RemoteConfig):
-    _key = 'ssh'
     host: str
 
     @classmethod
@@ -43,8 +45,8 @@ class SHHRemote(RemoteConfig):
                 return SSHLocation(self.host, root, optional=optional)
 
 
+@register('http')
 class HTTPRemote(RemoteConfig):
-    _key = 'http'
     url: str
 
     @classmethod
