@@ -1,7 +1,6 @@
 import pytest
-from git import Remote
 
-from bev.config import register, HTTPRemote, find
+from bev.config import register, HTTPRemote, find, RemoteConfig
 
 
 def test_invalid():
@@ -16,5 +15,5 @@ def test_invalid():
 def test_find():
     with pytest.raises(ValueError, match='not found'):
         find(int, 'ssh')
-    with pytest.raises(ValueError, match='not found'):
-        find(Remote, 'missing')
+    with pytest.raises(ValueError, match='Invalid key'):
+        find(RemoteConfig, 'missing')

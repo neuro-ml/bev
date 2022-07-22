@@ -1,3 +1,9 @@
+[![codecov](https://codecov.io/gh/neuro-ml/bev/branch/master/graph/badge.svg)](https://codecov.io/gh/neuro-ml/bev)
+[![pypi](https://img.shields.io/pypi/v/bev?logo=pypi&label=PyPi)](https://pypi.org/project/bev/)
+![License](https://img.shields.io/github/license/neuro-ml/bev)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/bev)](https://pypi.org/project/bev/)
+![GitHub branch checks state](https://img.shields.io/github/checks-status/neuro-ml/bev/master)
+
 Flexible version control for files and folders.
 
 # Install
