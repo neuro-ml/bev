@@ -44,6 +44,20 @@ def test_default(tests_root):
         assert x.default == default
 
 
+def test_fallback(tests_root):
+    with pytest.raises(ConfigError, match='fallback'):
+        parse('<string input>', {
+            'meta': {'fallback': 'a'},
+            'b': {'storage': '/'},
+            'c': {'storage': '/'},
+        })
+    with pytest.raises(ConfigError, match='No matching entry'):
+        parse('<string input>', {
+            'b': {'storage': '/'},
+            'c': {'storage': '/'},
+        })
+
+
 def test_inheritance(tests_root):
     file = tests_root / 'configs/compound.yml'
     with open(file, 'r') as fd:
