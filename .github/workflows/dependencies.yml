@@ -1,3 +1,5 @@
+name: Test Dependencies
+
 on: [ pull_request ]
 
 jobs:
