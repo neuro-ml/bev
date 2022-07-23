@@ -151,6 +151,8 @@ class ConfigMeta(NoExtra):
     hash: Union[str, HashConfig] = None
     include: Sequence[Include] = ()
 
+    _override = 'fallback', 'order', 'choose', 'hash'
+
     @validator('hash', pre=True)
     def normalize_hash(cls, v):
         if isinstance(v, str):
