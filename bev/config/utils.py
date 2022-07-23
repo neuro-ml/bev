@@ -7,6 +7,7 @@ from tarn import StorageLevel
 
 from .base import StorageCluster
 from .hostname import StrHostName
+from ..exceptions import ConfigError
 from ..utils import PathLike
 
 CONFIG = '.bev.yml'
@@ -38,10 +39,13 @@ def _filter_levels(levels):
             yield level
 
 
-def choose_local(metas, func, default):
-    for meta in metas:
+def choose_local(metas, func, default, root):
+    for meta in metas.values():
         if func(meta):
             return meta.name
+
+    if default is not None and default not in metas:
+        raise ConfigError(f'The fallback ({default}) is not present in the config {root}')
 
     return default
 

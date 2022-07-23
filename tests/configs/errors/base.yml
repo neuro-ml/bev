@@ -1,0 +1,4 @@
+meta:
+  hash: sha256
+  include:
+    - file: 'child.yml'

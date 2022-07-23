@@ -17,7 +17,7 @@ class CacheStorageIndex(NamedTuple):
 
 def load_config(config: Path) -> RepositoryConfig:
     with open(config, 'r') as file:
-        return parse(config, safe_load(file))
+        return parse(Path(config), safe_load(file))
 
 
 def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
@@ -47,21 +47,16 @@ def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
 def parse(root, config) -> RepositoryConfig:
     meta, entries = _parse(root, config, root)
 
-    fallback = None
     filter_func: Callable[[StorageCluster], bool] = default_choose
     if meta.choose is not None:
         path, attr = meta.choose.rsplit('.', 1)
         filter_func = getattr(importlib.import_module(path), attr)
-    if meta.fallback is not None:
-        fallback = meta.fallback
-        if fallback not in entries:
-            raise ConfigError(f'The fallback ({fallback}) is not present in the config {root}')
 
     if len(entries) == 1:
         local, = entries.values()
         remotes = ()
     else:
-        name = choose_local(entries.values(), filter_func, fallback)
+        name = choose_local(entries, filter_func, meta.fallback, root)
         if name is None:
             raise ConfigError(f'No matching entry in config {root}')
         local = entries.pop(name)
@@ -90,19 +85,31 @@ def _parse(name, config, root):
         entries[name] = StorageCluster(**entry)
 
     # parse parents
+    override = {}
     for parent in meta.include:
-        # TODO: don't just discard the parent meta
         parent_root, parent_config = parent.read(root)
         if parent_config is None:
             if parent.optional:
                 continue
             raise ConfigError(f'Parent config "{parent.value}" not found')
 
-        _, items = _parse(parent.value, parent_config, parent_root)
+        parent_meta, items = _parse(parent.value, parent_config, parent_root)
         common = set(items) & set(entries)
         if common:
             raise ConfigError(f'{name}: Trying to override the names {common} from parent config {parent.value}')
 
+        override.update({
+            k: getattr(parent_meta, k) for k in ConfigMeta._override if getattr(meta, k) is None
+        })
+        if meta.hash is None:
+            meta = meta.copy(update=dict(hash=parent_meta.hash))
+        elif parent_meta.hash is not None and meta.hash != parent_meta.hash:
+            raise ConfigError(
+                f'{name}: The parent config ({parent.value}) has a different hash spec: '
+                f'{meta.hash} vs {parent_meta.hash}'
+            )
+
         entries.update(items)
 
+    meta = meta.copy(update=override)
     return meta, entries
