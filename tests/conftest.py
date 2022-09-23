@@ -36,6 +36,11 @@ def tests_root():
 
 
 @pytest.fixture
+def configs_root(tests_root):
+    return tests_root / 'configs'
+
+
+@pytest.fixture
 def data_root(tests_root):
     return tests_root / 'data'
 

@@ -99,12 +99,18 @@ class StorageLevelConfig(NoExtra):
         return tuple(v)
 
 
+class CacheConfig(NoExtra):
+    index: Sequence[StorageLevelConfig]
+    storage: Sequence[StorageLevelConfig]
+    default: Dict[str, Any] = None
+
+
 class StorageCluster(NoExtra):
     name: str
     default: Dict[str, Any] = None
     hostname: Sequence[HostName] = ()
     storage: Sequence[StorageLevelConfig]
-    cache: Sequence[StorageLevelConfig] = ()
+    cache: CacheConfig = None
 
     @validator('hostname', pre=True)
     def from_single(cls, v):
@@ -112,12 +118,31 @@ class StorageCluster(NoExtra):
             v = v,
         return v
 
-    @validator('storage', 'cache', pre=True)
-    def from_string(cls, v, values):
+    @validator('storage', pre=True)
+    def validate_storage(cls, v, values):
+        default = (values['default'] or {}).copy()
+        return cls._parse_storage_levels(v, default)
+
+    @validator('cache', pre=True)
+    def validate_cache(cls, v, values):
+        default = (values['default'] or {}).copy()
+
+        if isinstance(v, dict) and 'index' in v:
+            v = v.copy()
+            default.update(v.pop('default', {}))
+            storage = cls._parse_storage_levels(v.pop('storage', values['storage']), default)
+            index = cls._parse_storage_levels(v.pop('index'), default)
+            return CacheConfig(**v, index=index, default=default, storage=storage)
+
+        index = cls._parse_storage_levels(v, default)
+        storage = cls._parse_storage_levels(values['storage'], default)
+        return CacheConfig(index=index, storage=storage, default=default)
+
+    @staticmethod
+    def _parse_storage_levels(v, default):
         if isinstance(v, (str, dict, StorageLevelConfig, LocationConfig)):
             v = v,
 
-        default = (values['default'] or {}).copy()
         # first try to interpret the entire storage as a single level
         try:
             return StorageLevelConfig(locations=v, default=default),
@@ -126,7 +151,9 @@ class StorageCluster(NoExtra):
 
         result = []
         for entry in v:
-            if isinstance(entry, (str, LocationConfig)):
+            if isinstance(v, StorageLevelConfig):
+                result.append(v)
+            elif isinstance(entry, (str, LocationConfig)):
                 entry = StorageLevelConfig(locations=entry, default=default)
             elif isinstance(entry, dict):
                 local_entry = entry.copy()

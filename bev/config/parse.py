@@ -12,7 +12,8 @@ from ..exceptions import ConfigError
 
 class CacheStorageIndex(NamedTuple):
     local: Sequence[StorageLevelConfig]
-    remote: Sequence[RemoteStorage] = ()
+    remote: Sequence[RemoteStorage]
+    storage: Storage
 
 
 def load_config(config: Path) -> RepositoryConfig:
@@ -29,19 +30,35 @@ def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
         path, attr = meta.order.rsplit('.', 1)
         order_func = getattr(importlib.import_module(path), attr)
 
-    # filter only available remotes
-    remote_storage, remote_cache = [], []
-    for entry in config.remotes:
-        for container, levels in zip((remote_storage, remote_cache), (entry.storage, entry.cache)):
-            for level in levels:
-                for location in level.locations:
-                    for remote in location.remote:
-                        remote = remote.build(location.root, location.optional)
-                        if remote is not None:
-                            container.append(remote)
+    storage = Storage(
+        *wrap_levels(config.local.storage, Disk, order_func),
+        remote=filter_remotes([remote.storage for remote in config.remotes])
+    )
+    index = None
+    if config.local.cache is not None:
+        cache_storage = Storage(
+            *wrap_levels(config.local.cache.storage, Disk, order_func),
+            remote=filter_remotes([remote.cache.storage for remote in config.remotes if remote.cache is not None])
+        )
+        index = CacheStorageIndex(
+            tuple(_filter_levels(config.local.cache.index)),
+            filter_remotes([remote.cache.index for remote in config.remotes if remote.cache is not None]),
+            cache_storage,
+        )
+    return storage, index
 
-    return Storage(*wrap_levels(config.local.storage, Disk, order_func), remote=remote_storage), CacheStorageIndex(
-        tuple(_filter_levels(config.local.cache)), remote_cache)
+
+def filter_remotes(entries):
+    remotes = []
+    for entry in entries:
+        for level in entry:
+            for location in level.locations:
+                for remote in location.remote:
+                    remote = remote.build(location.root, location.optional)
+                    if remote is not None:
+                        remotes.append(remote)
+
+    return remotes
 
 
 def parse(root, config) -> RepositoryConfig:
