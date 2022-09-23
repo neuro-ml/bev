@@ -21,7 +21,10 @@ def init_config(config, permissions, group):
     if meta.hash is None:
         raise ValueError('The config\'s `meta` must contain a `hash` key')
 
-    levels = list(local.storage) + list(local.cache)
+    levels = list(local.storage)
+    if local.cache is not None:
+        levels.extend(local.cache.index)
+        levels.extend(local.cache.storage)
 
     for level in levels:
         for location in level.locations:

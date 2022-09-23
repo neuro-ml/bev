@@ -24,27 +24,26 @@ def test_select_name(name):
         assert len(config.remotes) == 1
 
 
-def test_parser(tests_root, subtests):
-    for file in tests_root.glob('configs/*.yml'):
+def test_parser(configs_root, subtests):
+    for file in configs_root.glob('*.yml'):
         with subtests.test(config=file.name):
             with open(file, 'r') as fd:
                 _parse(file, safe_load(fd), file)
 
 
-def test_simplified(tests_root):
-    assert load_config(tests_root / 'configs/single-full.yml') == load_config(
-        tests_root / 'configs/single-simplified.yml')
+def test_simplified(configs_root):
+    assert load_config(configs_root / 'single-full.yml') == load_config(configs_root / 'single-simplified.yml')
 
 
-def test_default(tests_root):
-    config = load_config(tests_root / 'configs/full.yml')
+def test_default(configs_root):
+    config = load_config(configs_root / 'full.yml')
     default = config.local.default
     assert default == {'optional': True}
     for x in config.local.storage:
         assert x.default == default
 
 
-def test_fallback(tests_root):
+def test_fallback():
     with pytest.raises(ConfigError, match='fallback'):
         parse('<string input>', {
             'meta': {'fallback': 'a'},
@@ -58,8 +57,8 @@ def test_fallback(tests_root):
         })
 
 
-def test_inheritance(tests_root):
-    file = tests_root / 'configs/compound.yml'
+def test_inheritance(configs_root):
+    file = configs_root / 'compound.yml'
     with open(file, 'r') as fd:
         meta, config = _parse(file, safe_load(fd), file)
 
@@ -69,7 +68,15 @@ def test_inheritance(tests_root):
     assert meta.choose is None
 
 
-def test_inheritance_errors(tests_root):
-    file = tests_root / 'configs/errors/base.yml'
+def test_inheritance_errors(configs_root):
+    file = configs_root / 'errors/base.yml'
     with pytest.raises(ConfigError), open(file, 'r') as fd:
         _parse(file, safe_load(fd), file)
+
+
+def test_custom_cache_storage(configs_root):
+    config = load_config(configs_root / 'custom-cache-storage.yml')
+    assert config.local.cache.storage != config.local.storage
+
+    config = load_config(configs_root / 'full.yml')
+    assert config.local.cache.storage == config.local.storage
