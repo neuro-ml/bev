@@ -1,82 +1,67 @@
-import ast
 import hashlib
-import inspect
+from enum import Enum
 from pathlib import Path
+from typing import List
 
-from tarn.config import init_storage as _init_storage
+import typer
+from tarn.config import init_storage, StorageConfig
+
+from .app import app_command, cli_error
 
 
-def init_storage():
-    path = Path()
+# because typer can't just accept a list of choices
+def upd(d):
+    for algo in hashlib.algorithms_guaranteed:
+        d[algo] = algo
+
+
+class Hashes(Enum):
+    upd(locals())
+
+
+@app_command
+def storage(
+        path: Path = typer.Argument('.', help='The path to the storage root', show_default='The current directory'),
+        hash: Hashes = typer.Option('sha256', help='The hashing algorithm to use'),
+        levels: List[int] = typer.Option(
+            None, help='The levels of folders nesting', show_default='1, digest_size - 1'
+        ),
+        permissions: str = typer.Option(
+            None, '--permissions', '-p', help='The permissions mask used to create the storage, e.g. 770',
+        ),
+        group: str = typer.Option(
+            None, '--group', '-g', help='The group used to create the storage',
+        ),
+):
+    """Create a storage at a given path"""
+
     if list(path.iterdir()):
-        print('The folder is not empty')
-        exit(1)
+        raise cli_error(FileExistsError, 'The folder is not empty')
 
-    algos = hashlib.algorithms_guaranteed
-    default_algo = 'sha256'
+    algo_name = hash.name
+    algo = getattr(hashlib, algo_name)
+    # try:
+    #     params = {x.name: x.default for x in list(inspect.signature(algo).parameters.values())[1:]}
+    # except ValueError:
+    #     params = {}
+    #
+    # kwargs = {}
+    # if params:
+    #     all_params = '\n'.join(f'{k}: {v}' for k, v in kwargs.items())
+    #     print(f'Default hash parameters:\n{all_params}\nModify hash parameters? (y/N): ', end='')
+    #     if parse_yes():
+    #         for param, default in params.items():
+    #             print(f'Algorithm parameter "{param}" (Press Enter for {default}): ', end='')
+    #             value = input().strip()
+    #             if value:
+    #                 value = ast.literal_eval(value)
+    #                 if value != default:
+    #                     kwargs[param] = value
 
-    print(f'Hash algorithm (Press Enter for {default_algo}, ? for options): ', end='')
-    option = input().strip() or default_algo
-    while option not in algos:
-        if option != '?':
-            print(f'Unknown algorithm "{option}"')
-        print('Available algorithms:', ', '.join(algos))
-        print('Hash algorithm (Press Enter for sha256, ? for options): ', end='')
-        option = input().strip() or default_algo
+    if levels is None:
+        digest_size = algo().digest_size
+        levels = 1, digest_size - 1
 
-    algo = getattr(hashlib, option)
-    try:
-        params = {x.name: x.default for x in list(inspect.signature(algo).parameters.values())[1:]}
-    except ValueError:
-        params = {}
-
-    kwargs = {}
-    if params:
-        all_params = '\n'.join(f'{k}: {v}' for k, v in kwargs.items())
-        print(f'Default hash parameters:\n{all_params}\nModify hash parameters? (y/N): ', end='')
-        if parse_yes():
-            for param, default in params.items():
-                print(f'Algorithm parameter "{param}" (Press Enter for {default}): ', end='')
-                value = input().strip()
-                if value:
-                    value = ast.literal_eval(value)
-                    if value != default:
-                        kwargs[param] = value
-
-    digest_size = algo(**kwargs).digest_size
-    half_digest = digest_size // 2
-    default_levels = 1, half_digest - 1, half_digest
-    print(f'Folder levels. Must sum to {digest_size} (Press Enter for {default_levels}): ', end='')
-    levels = parse_levels(default_levels, digest_size)
-
-    assert 'name' not in kwargs
-    kwargs['name'] = option
-    _init_storage(path, algorithm=kwargs, levels=levels, exist_ok=True)
-
-
-def parse_yes():
-    raw = input().strip()
-    value = raw.lower()
-    while True:
-        if value in ['y', 'yes']:
-            return True
-        if value in ['n', 'no', '']:
-            return False
-
-        print('Unknown option:', raw, 'Try again: ', end='')
-        raw = input().strip()
-        value = raw.lower()
-
-
-def parse_levels(default, size):
-    levels = input().strip()
-    while True:
-        if not levels:
-            return default
-
-        levels = ast.literal_eval(levels)
-        if sum(levels) == size:
-            return levels
-
-        print(f"The levels don't sum to {size}. Try again: ", end='')
-        levels = input().strip()
+    init_storage(
+        StorageConfig(hash=algo_name, levels=levels), path, permissions=permissions, group=group,
+    )

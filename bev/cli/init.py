@@ -1,14 +1,29 @@
-from typing import Union
+from pathlib import Path
 
+import typer
 import yaml
-
-from bev.config import find_repo_root, CONFIG, load_config
-from bev.utils import RepositoryNotFound
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, root_params, StorageConfig
 from tarn.utils import mkdir
 
+from .app import app_command
+from ..config import find_repo_root, CONFIG, load_config
+from ..utils import RepositoryNotFound
 
-def init(repository: str = '.', permissions: str = None, group: Union[int, str] = None):
+
+@app_command
+def init(
+        repository: Path = typer.Option(
+            None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
+            show_default=False,
+        ),
+        permissions: str = typer.Option(
+            None, '--permissions', '-p', help='The permissions mask used to create the storage, e.g. 770',
+        ),
+        group: str = typer.Option(
+            None, '--group', '-g', help='The group used to create the storage',
+        ),
+):
+    """Initialize a bev repository by creating the storage locations specified in its config"""
     root = find_repo_root(repository)
     if root is None:
         raise RepositoryNotFound(f'{CONFIG} files not found in current folder\'s parents')
@@ -45,10 +60,18 @@ def get_root_params(levels, permissions, group):
                 return root_params(entry.root)
 
     if permissions is None:
-        permissions = input('Folder permissions:')
-    if isinstance(permissions, str):
-        permissions = int(permissions, base=8)
-    assert 0 <= permissions <= 0o777
+        print('Could not infer the permissions, please specify them explicitly with the "--permissions" option')
+        raise typer.Exit(255)
+    if not set(permissions) <= set(range(8)):
+        print(f'Wrong permissions mask format {permissions}')
+        raise typer.Exit(255)
+
+    permissions = int(permissions, base=8)
+    if not 0 <= permissions <= 0o777:
+        print(f'The permissions must be between 000 and 777, {permissions} provided')
+        raise typer.Exit(255)
+
     if group is None:
-        group = input('Folder group:')
+        print('Could not infer the group, please specify it explicitly with the "--group" option')
+        raise typer.Exit(255)
     return permissions, group

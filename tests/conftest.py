@@ -1,3 +1,4 @@
+import hashlib
 import os
 import tempfile
 from contextlib import contextmanager
@@ -5,29 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from bev.cli.add import add
 from tarn.config import init_storage, StorageConfig
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_config():
-    data_root = Path(__file__).parent / 'data'
-
-    with tempfile.TemporaryDirectory() as storage:
-        storage = Path(storage) / 'storage'
-
-        # create config
-        with open(data_root / '.bev.yml', 'w') as file:
-            # language=YAML
-            file.write('tests: {storage: [{root: %s}]}' % storage)
-
-        init_storage(StorageConfig(hash='blake2b', levels=[1, 63]), storage)
-        add(data_root / 'images', data_root, True, data_root)
-        add(data_root / '4.png', data_root, True, data_root)
-        yield
-        os.remove(data_root / '.bev.yml')
-        os.remove(data_root / 'images.hash')
-        os.remove(data_root / '4.png.hash')
 
 
 @pytest.fixture
@@ -41,16 +20,13 @@ def configs_root(tests_root):
 
 
 @pytest.fixture
-def data_root(tests_root):
-    return tests_root / 'data'
-
-
-@pytest.fixture
 def temp_repo_factory():
     @contextmanager
-    def factory():
+    def factory(root=None):
         with tempfile.TemporaryDirectory() as storage, tempfile.TemporaryDirectory() as repo:
             storage = Path(storage) / 'storage'
+            if root is not None:
+                repo = root
             repo = Path(repo)
 
             # create config
@@ -58,7 +34,7 @@ def temp_repo_factory():
                 # language=YAML
                 file.write('tests: {storage: [{root: %s}]}' % storage)
 
-            init_storage(StorageConfig(hash='blake2b', levels=[1, 63]), storage)
+            init_storage(StorageConfig(hash='sha256', levels=[1, 31]), storage)
             yield repo
 
     return factory
@@ -68,3 +44,22 @@ def temp_repo_factory():
 def temp_repo(temp_repo_factory) -> Path:
     with temp_repo_factory() as repo:
         yield repo
+
+
+@pytest.fixture
+def sha256empty() -> str:
+    return hashlib.sha256().hexdigest()
+
+
+@pytest.fixture
+def chdir():
+    @contextmanager
+    def manager(path):
+        cwd = os.getcwd()
+        try:
+            os.chdir(path)
+            yield
+        finally:
+            os.chdir(cwd)
+
+    return manager

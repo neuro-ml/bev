@@ -1,18 +1,108 @@
 import json
-import shutil
 import os
+import shutil
 from collections import OrderedDict
 from pathlib import Path
-from typing import Optional, Union, Sequence
+from typing import Optional, List
 
+import typer
 from tqdm.auto import tqdm
 
-from ..interface import Repository, PathLike
-from ..shortcuts import get_consistent_repo
+from .app import app_command
+from .utils import normalize_sources_and_destination
+from ..exceptions import HashError
 from ..hash import is_hash, to_hash
+from ..interface import Repository
+from ..ops import gather, Conflict, save_hash, load_hash
+from ..utils import deprecate, PathOrStr
 
 
-def validate_file(path: Path):
+@app_command
+def add(
+        sources: List[Path] = typer.Argument(..., help='The source paths to add', show_default=False),
+        destination: Optional[Path] = typer.Option(
+            None, '--destination', '--dst',
+            help='The destination at which the hashes will be stored. '
+                 'If none -  the hashes will be stored alongside the source'
+        ),
+        keep: bool = typer.Option(False, help='Whether to keep the sources after hashing'),
+        conflict: Conflict = typer.Option(
+            'error', case_sensitive=False,
+            help='Conflict resolution policy, in case the destination already exists'
+        ),
+        repository: Path = typer.Option(
+            None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
+            show_default=False,
+        )
+):
+    """Add files and/or folders to a bev repository"""
+    pairs, repo = normalize_sources_and_destination(sources, destination, repository)
+    if not pairs:
+        return
+
+    for source, destination in pairs:
+        if not is_hash(destination):
+            destination = to_hash(destination)
+
+        if source == destination:
+            # TODO: warn
+            continue
+
+        _gather_and_write(source, destination, keep, conflict, repo.storage)
+
+
+def _gather_and_write(source: PathOrStr, destination: PathOrStr, keep: bool, conflict: Conflict, storage):
+    source, destination = Path(source), Path(destination)
+    previous = None
+    if destination.exists():
+        if conflict == Conflict.error:
+            raise HashError(f'The destination "{destination}" already exists and no conflict resolution provided')
+
+        if not destination.is_file():
+            raise HashError(f'The destination "{destination}" is not a file')
+
+        if conflict != Conflict.replace:
+            previous = load_hash(destination, storage)
+
+    current = gather(source, storage)
+    if previous is not None:
+        if isinstance(current, dict):
+            if not isinstance(previous, dict):
+                raise HashError(f'The previous version ({destination}) is not a folder')
+
+            if conflict == Conflict.update:
+                for k in set(current) & set(previous):
+                    if current[k] != previous[k]:
+                        raise HashError(
+                            f'The current ({current[k][:6]}...) and previous ({previous[k][:6]}...) '
+                            f'versions do not match for "{k}", which is required for the "update" '
+                            'conflict resolution'
+                        )
+
+            previous.update(current)
+            current = previous
+
+        else:
+            if not isinstance(previous, str):
+                raise HashError(f'The previous version ({destination}) is not a file')
+
+            if conflict == Conflict.update and current != previous:
+                raise HashError(
+                    f'The current ({current[:6]}...) and previous ({previous[:6]}...) '
+                    f'versions do not match, which is required for the "update" conflict resolution'
+                )
+
+    save_hash(current, destination, storage)
+
+    if not keep:
+        if source.is_dir():
+            shutil.rmtree(source)
+        else:
+            os.remove(source)
+
+
+@deprecate
+def validate_file(path: Path):  # pragma: no cover
     assert path.is_file(), path
     if is_hash(path):
         raise ValueError('You are trying to add a hash to the storage.')
@@ -20,10 +110,12 @@ def validate_file(path: Path):
     return path
 
 
-def save_tree(repo: Repository, tree: dict, destination: Path):
+@deprecate
+def save_tree(repo: Repository, tree: dict, destination: Path):  # pragma: no cover
     # save the directory description
     # making sure that each time the same string will be saved
     tree = OrderedDict((k, tree[k]) for k in sorted(tree))
+    # FIXME
     tree_path = destination.parent / f'{destination.name}.hash.temp'
 
     # TODO: storage should allow writing directly from memory
@@ -38,7 +130,8 @@ def save_tree(repo: Repository, tree: dict, destination: Path):
     return key
 
 
-def add_file(repo: Repository, source: Path, destination: Optional[Path], keep: bool):
+@deprecate
+def add_file(repo: Repository, source: Path, destination: Optional[Path], keep: bool):  # pragma: no cover
     validate_file(source)
     key = repo.storage.write(source)
 
@@ -53,7 +146,8 @@ def add_file(repo: Repository, source: Path, destination: Optional[Path], keep: 
     return key
 
 
-def add_folder(repo: Repository, source: Path, destination: Optional[Path], keep: bool):
+@deprecate
+def add_folder(repo: Repository, source: Path, destination: Optional[Path], keep: bool):  # pragma: no cover
     assert source.is_dir()
 
     tree = {}
@@ -69,51 +163,3 @@ def add_folder(repo: Repository, source: Path, destination: Optional[Path], keep
         shutil.rmtree(source)
 
     return result
-
-
-def add(source: Union[PathLike, Sequence[PathLike]], destination: PathLike, keep: bool, context: str = '.'):
-    if isinstance(source, (str, Path)):
-        sources = [Path(source)]
-    else:
-        sources = list(map(Path, source))
-
-    destination = Path(destination)
-    if len(sources) > 1:
-        if not destination.exists():
-            raise FileNotFoundError('When adding multiple sources the destination must be an existing folder')
-        if not destination.is_dir():
-            raise ValueError('When adding multiple sources the destination must be an existing folder')
-        dst_root = destination
-    else:
-        if destination.exists():
-            if destination.is_dir():
-                dst_root = destination
-            else:
-                dst_root = destination.parent
-        else:
-            if not destination.parent.exists() or not destination.parent.is_dir():
-                raise FileNotFoundError(f'The parent destination directory "{destination.parent}" does not exist')
-
-            dst_root = destination.parent
-
-    sources_root = []
-    for source in sources:
-        if not source.exists():
-            raise FileNotFoundError(source)
-        sources_root.append(source.parent)
-
-    repo = get_consistent_repo([context, dst_root, *sources_root])
-
-    for source in sources:
-        local_destination = destination
-        if local_destination.is_dir():
-            local_destination /= to_hash(source).name
-        if not is_hash(local_destination):
-            local_destination = to_hash(local_destination)
-        if local_destination.exists():
-            raise FileExistsError(local_destination)
-
-        if source.is_dir():
-            add_folder(repo, source, local_destination, keep)
-        else:
-            add_file(repo, source, local_destination, keep)

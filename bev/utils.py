@@ -1,11 +1,13 @@
-from pathlib import Path
+import warnings
+from functools import wraps
+from os import PathLike
 import subprocess
 import shlex
 from typing import Union
 
 from .exceptions import *
 
-PathLike = Union[str, Path]
+PathOrStr = Union[str, PathLike[str]]
 
 
 # TODO: use gitpython
@@ -22,3 +24,18 @@ def call_git(command: str, cwd=None, wrap=False) -> str:
 
 # legacy
 HashNotFoundError = HashNotFound
+
+
+def deprecate(func):
+    @wraps(func)
+    def decorator(*args, **kwargs):
+        nonlocal warned
+        if not warned:
+            warnings.warn('This function is deprecated', DeprecationWarning)
+            warnings.warn('This function is deprecated', UserWarning)
+            warned = True
+
+        return func(*args, **kwargs)
+
+    warned = False
+    return decorator
