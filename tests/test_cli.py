@@ -40,6 +40,8 @@ def test_fetch(temp_repo, chdir):
         assert result.output == 'HashError Cannot fetch "b" - it is not a hash nor a folder\n'
         result = runner.invoke(app, ['fetch', '.'])
         assert result.exit_code == 0, result.output
+        result = runner.invoke(app, ['fetch'])
+        assert result.exit_code == 0, result.output
 
 
 def test_fetch_missing(temp_repo, sha256empty):

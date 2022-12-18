@@ -36,7 +36,7 @@ def fetch(
         )
 ):
     """Fetch the missing values from remote, if possible"""
-    paths = paths or ['.']
+    paths = paths or [Path('.')]
     if repository is None:
         repository = '.'
 
