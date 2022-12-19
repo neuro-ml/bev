@@ -31,8 +31,8 @@ def deprecate(func):
     def decorator(*args, **kwargs):
         nonlocal warned
         if not warned:
-            warnings.warn('This function is deprecated', DeprecationWarning)
-            warnings.warn('This function is deprecated', UserWarning)
+            warnings.warn('This function is deprecated', DeprecationWarning, 2)
+            warnings.warn('This function is deprecated', UserWarning, 2)
             warned = True
 
         return func(*args, **kwargs)
