@@ -24,13 +24,13 @@ class PullMode(Enum):
 @app_command
 def pull(
         sources: List[Path] = typer.Argument(..., help='The source paths to add', show_default=False),
-        mode: PullMode = typer.Argument(..., help='Pull mode', show_default=False),
+        mode: PullMode = typer.Option(..., help='Pull mode', show_default=False),
         destination: Optional[Path] = typer.Option(
             None, '--destination', '--dst',
             help='The destination at which the hashes will be stored. '
                  'If none -  the hashes will be stored alongside the source'
         ),
-        keep: bool = typer.Option(False, help='Whether to keep the sources after hashing'),
+        keep: bool = typer.Option(False, help='Whether to keep the sources after pulling the real files'),
         repository: Path = typer.Option(
             None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
@@ -56,6 +56,9 @@ def pull(
         else:
             if not is_hash(source):
                 source = to_hash(source)
+            if not source.exists():
+                raise HashError(f'The source "{source}" does not exist')
+
             sources.append(source)
 
     pairs, repo = normalize_sources_and_destination(sources, destination, repository)
@@ -70,7 +73,7 @@ def pull(
             # TODO: warn
             continue
 
-        _pull(source, destination, mode, keep, repo)
+        _pull(source, destination, mode.name, keep, repo)
 
 
 def _pull(source, destination, mode, keep, repo):

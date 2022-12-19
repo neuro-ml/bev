@@ -164,6 +164,3 @@ def test_hash_consistency(temp_repo):
     temp_repo = Repository(temp_repo.root, check=True)
     with pytest.raises(InconsistentHash):
         temp_repo.resolve(file, version=Local)
-
-
-def test_

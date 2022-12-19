@@ -43,6 +43,24 @@ def test_fetch_missing(temp_repo, sha256empty):
     assert result.exit_code == 255
     assert 'HashNotFound Could not fetch 1 key(s) from remote\n' in result.output
 
+
+def test_pull(temp_repo, chdir):
+    structure = {
+        'file.npy': 'first file content',
+        'folder/a.txt': 'nested a content',
+        'folder/b.bin': 'nested b content',
+    }
+    create_structure(temp_repo, structure)
+    with chdir(temp_repo):
+        result = runner.invoke(app, ['add', 'file.npy', 'folder'])
+        assert result.exit_code == 0
+
+        result = runner.invoke(app, ['pull', 'file.npy.hash', 'folder.hash', '--mode', 'copy'])
+        assert result.exit_code == 0
+        for file, content in structure.items():
+            with open(file, 'r') as fd:
+                assert fd.read() == content
+
 # def test_init(tests_root, tmpdir):
 #     tmpdir = Path(tmpdir)
 #     _, group = root_params(tmpdir)
