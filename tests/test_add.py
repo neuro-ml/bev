@@ -3,7 +3,7 @@ from pathlib import Path
 from typer.testing import CliRunner
 
 from bev import Repository
-from bev.cli.app import app
+from bev.cli.entrypoint import app
 from bev.hash import load_key, is_tree, tree_to_hash, load_tree, strip_tree
 from bev.testing import create_structure, TempDir
 
@@ -26,7 +26,7 @@ def test_add_relative(temp_repo_factory, temp_dir, data_root, tests_root, chdir)
         with chdir(temp_repo_one):
             # single file
             result = runner.invoke(app, ['add', 'some-file.png'])
-            assert result.exit_code == 0
+            assert result.exit_code == 0, result.output
             assert not (temp_repo_one / 'some-file.png').exists()
             assert (temp_repo_one / 'some-file.png.hash').exists()
 

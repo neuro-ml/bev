@@ -9,7 +9,7 @@ import typer
 from tqdm.auto import tqdm
 
 from .add import add
-from .app import cli_error, app, app_command
+from .app import cli_error, _app, app_command
 from .utils import normalize_sources, normalize_sources_and_destination
 from ..exceptions import HashError
 from ..hash import is_hash, to_hash, from_hash
@@ -111,7 +111,7 @@ PULL_MODES = {
 }
 
 
-@app.command(deprecated=True)
+@_app.command(deprecated=True)
 def gather(
         source: Path = typer.Argument(..., help='The source path to gather', show_default=False),
         destination: Optional[Path] = typer.Option(

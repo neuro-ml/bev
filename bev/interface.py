@@ -10,7 +10,7 @@ from wcmatch.glob import GLOBSTAR
 
 from .config import CONFIG, build_storage, find_vcs_root
 from .exceptions import RepositoryNotFound, HashNotFound, InconsistentHash, NameConflict, InconsistentRepositories
-from .hash import is_hash, to_hash, load_tree, load_tree_key, strip_tree, FileHash, InsideTreeHash, Key
+from .hash import is_hash, to_hash, load_tree, strip_tree, Key, load_key, is_tree
 from .local import Local
 from .utils import PathOrStr
 from .vc import Version, CommittedVersion, VC, SubprocessGit
@@ -171,12 +171,14 @@ class Repository:
                 raise
             return None
 
-        if isinstance(h, FileHash):
-            return h.key
+        if isinstance(h, Key):
+            return h
 
-        assert isinstance(h, InsideTreeHash), h
-        relative = str(h.relative)
-        tree = self._get_tree(h.key, version, fetch)
+        h, relative = h
+        if relative == '.':
+            raise HashNotFound(f'"{str(path)}" is a hashed folder')
+
+        tree = self._get_tree(h, version, fetch)
         if relative not in tree:
             if relative in self._expand_folders(tree):
                 raise HashNotFound(f'"{str(path)}" is a folder inside a tree hash')
@@ -199,7 +201,7 @@ class Repository:
 
     # navigation
 
-    def __truediv__(self, other: Union[str, Path]):
+    def __truediv__(self, other: PathOrStr):
         other = Path(other)
         if other.is_absolute():
             raise ValueError('Only relative paths are supported')
@@ -238,7 +240,7 @@ class Repository:
     def _get_uncomitted_hash(self, relative: Path):
         path = self.root / relative
         if path.exists():
-            return load_tree_key(path)
+            return load_key(path)
 
     @lru_cache(None)
     def _get_committed_hash(self, relative: Path, version: CommittedVersion):
@@ -256,14 +258,17 @@ class Repository:
             key = self._get_hash(hash_path, version)
             if key is not None:
                 key = strip_tree(key)
-                return InsideTreeHash(key, parent, hash_path, path.relative_to(parent))
+                return key, str(path.relative_to(parent))
 
         hash_path = to_hash(path)
         key = self._get_hash(hash_path, version)
         if key is None:
             raise HashNotFound(path)
 
-        return FileHash(key, path, hash_path)
+        if is_tree(key):
+            return key, '.'
+
+        return key
 
     def _resolve_check(self, check):
         if check is None:

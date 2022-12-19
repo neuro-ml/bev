@@ -13,9 +13,6 @@ from .app import app_command
 
 
 def _fetch(repo: Repository, path: Path):
-    if not is_hash(path):
-        path = to_hash(path)
-
     key = load_key(path)
     if is_tree(key):
         key = strip_tree(key)

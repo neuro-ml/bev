@@ -5,11 +5,11 @@ from typing import Optional
 import typer
 
 from .add import add
-from .app import app
+from .app import _app
 from ..ops import Conflict
 
 
-@app.command(deprecated=True)
+@_app.command(deprecated=True)
 def update(
         source: Path = typer.Argument(..., help='The source path to gather', show_default=False),
         destination: Optional[Path] = typer.Option(

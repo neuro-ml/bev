@@ -4,7 +4,7 @@ import typer
 
 from bev.exceptions import BevError
 
-app = typer.Typer()
+_app = typer.Typer()
 
 
 class CliError(Exception):
@@ -46,4 +46,4 @@ def command(application):
     return decorator
 
 
-app_command = command(app)
+app_command = command(_app)

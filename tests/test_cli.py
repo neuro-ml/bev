@@ -1,18 +1,9 @@
-import os
-from pathlib import Path
-
-import pytest
 from typer.testing import CliRunner
 
 from bev import Repository
-from bev.cli.add import add
-from bev.cli.app import app
-from bev.cli.fetch import fetch
-from bev.cli.init import init_config
-from bev.config import load_config
+from bev.cli.entrypoint import app
 from bev.hash import tree_to_hash
 from bev.testing import create_structure
-from tarn.config import root_params, load_config as load_storage_config
 
 runner = CliRunner()
 

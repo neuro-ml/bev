@@ -68,7 +68,8 @@ class SubprocessGit(VC):
 
     def list_dir(self, relative: str, version: CommittedVersion) -> Sequence[TreeEntry]:
         result = []
-        for line in self._call_git(f'git ls-tree {version}', self.root / relative).splitlines():
+        suffix = f':{relative}' if relative != '.' else ''
+        for line in self._call_git(f'git ls-tree {version}{suffix}', self.root).splitlines():
             mode, kind, rest = line.split(' ', 2)
             _, name = rest.split('\t')
             result.append(TreeEntry(name, kind == 'tree', kind == 'link'))

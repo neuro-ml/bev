@@ -7,7 +7,7 @@ from typing import NamedTuple, Dict, Union
 
 from tarn import Storage
 
-from .utils import PathOrStr
+from .utils import PathOrStr, deprecate
 
 Key = str
 Tree = Dict[PathOrStr, Union[Key, Dict]]
@@ -36,34 +36,6 @@ def is_tree(key: Key):
     return key.startswith('T:')
 
 
-class FileHash(NamedTuple):
-    key: Key
-    path: Path
-    hash: Path
-
-
-class TreeHash(NamedTuple):
-    key: Key
-    path: Path
-    hash: Path
-
-
-class InsideTreeHash(NamedTuple):
-    key: Key
-    root: Path
-    hash: Path
-    relative: Path
-
-
-def dispatch_hash(path):
-    path = Path(path)
-    key = load_key(path)
-    stripped = strip_tree(key)
-    if key == stripped:
-        return FileHash(key, from_hash(path), path)
-    return TreeHash(stripped, from_hash(path), path)
-
-
 def load_key(path: PathOrStr):
     with open(path, 'r') as file:
         return file.read().strip()
@@ -74,17 +46,8 @@ def load_tree(path: Path):
         return json.load(file)
 
 
-# FIXME: the names are misleading
-def load_tree_key(path: Path):
-    with open(path) as file:
-        return strip_tree(file.read().strip())
-
-
 def strip_tree(key):
-    # TODO: remove this
-    if key.startswith('tree:'):
-        key = key[5:]
-    elif key.startswith('T:'):
+    if key.startswith('T:'):
         key = key[2:]
     return key
 
@@ -135,3 +98,38 @@ def normalize_tree(tree: Tree, digest_size: int):
 
     # TODO: detect folders that have hashes
     return result
+
+
+@deprecate
+def dispatch_hash(path):  # pragma: no cover
+    path = Path(path)
+    key = load_key(path)
+    stripped = strip_tree(key)
+    if key == stripped:
+        return FileHash(key, from_hash(path), path)
+    return TreeHash(stripped, from_hash(path), path)
+
+
+@deprecate
+def load_tree_key(path: Path):  # pragma: no cover
+    with open(path) as file:
+        return strip_tree(file.read().strip())
+
+
+class FileHash(NamedTuple):
+    key: Key
+    path: Path
+    hash: Path
+
+
+class TreeHash(NamedTuple):
+    key: Key
+    path: Path
+    hash: Path
+
+
+class InsideTreeHash(NamedTuple):
+    key: Key
+    root: Path
+    hash: Path
+    relative: Path
