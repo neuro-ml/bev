@@ -1,33 +1,27 @@
-import shutil
+import warnings
 from pathlib import Path
+from typing import Optional
 
-from ..shortcuts import get_consistent_repo
-from ..hash import is_hash, load_tree, load_tree_key
-from .add import add_folder, save_tree
+import typer
+
+from .add import add
+from .app import _app
+from ..ops import Conflict
 
 
-def update(source: str, destination: str, keep: bool, overwrite: bool):
-    source, destination = Path(source), Path(destination)
-    if not is_hash(destination):
-        raise ValueError('The destination must be a hash.')
-    if not source.is_dir():
-        raise ValueError('The source must be a folder.')
+@_app.command(deprecated=True)
+def update(
+        source: Path = typer.Argument(..., help='The source path to gather', show_default=False),
+        destination: Optional[Path] = typer.Option(
+            None, '--destination', '--dst',
+            help='The destination at which the hashes will be stored. '
+                 'If none -  the hashes will be stored alongside the source'
+        ),
+        keep: bool = typer.Option(False, help='Whether to keep the sources after hashing'),
+        overwrite: bool = typer.Option(False, help='Whether to overwrite the existing values in case of conflict'),
+):  # pragma: no cover
+    """Add new entries to a folder hash. Warning! this command is superseded by "add" and will be removed soon"""
 
-    repo = get_consistent_repo(['.', source, destination.parent])
-    key = load_tree_key(destination)
-    mapping = repo.storage.read(load_tree, key)
-
-    new = add_folder(repo, source, None, keep=True)
-    common = set(new) & set(mapping)
-    mismatch = {k for k in common if new[k] != mapping[k]}
-    if mismatch:
-        if not overwrite:
-            raise ValueError(f'Mismatch between old and new files at following paths: {mismatch}')
-        print(f'Mismatched {len(mismatch)} files. Overwriting.')
-    if common:
-        print(f'{len(common)} files were already present.')
-
-    mapping.update(new)
-    save_tree(repo, mapping, destination)
-    if not keep:
-        shutil.rmtree(source)
+    warnings.warn('This command is deprecated. Use "add" instead', UserWarning)
+    warnings.warn('This command is deprecated. Use "add" instead', DeprecationWarning)
+    return add([source], destination, keep, Conflict.override if overwrite else Conflict.update, '.')

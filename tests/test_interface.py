@@ -1,35 +1,150 @@
 import os
+import shutil
 from pathlib import Path
 
 import pytest
 
-from bev.cli.add import add_file
-
 from bev import Local, Repository
-from bev.exceptions import InconsistentHash
+from bev.exceptions import InconsistentHash, HashNotFound
+from bev.testing import create_structure
 
 
-def test_glob(data_root):
-    repo = Repository(data_root)
+def test_glob(git_repository):
+    def check(version, expected, pattern=None):
+        expected = set(map(Path, expected))
+        # add folders
+        if pattern is None:
+            for entry in list(expected):
+                expected.update(entry.parents)
+            expected.discard(Path('.'))
+            pattern = '**/*'
+        assert set(repo.glob(pattern, version=version)) == expected
 
-    assert set(repo.glob('images/*.png', version=Local)) == set(
-        map(Path, ['images/1.png', 'images/2.png', 'images/3.png']))
+    repo = Repository(git_repository)
+    # all content
+    check('v1', [
+        'just-a-file.txt',
+        'another.file',
+        'images/one.png',
+        'images/two.png',
+        'folder/file.txt',
+        'folder/nested/a.npy',
+        'folder/nested/b.npy',
+    ])
+    check('v2', [
+        'just-a-file.txt',
+        'another.file',
+        'images/one.png',
+        'images/two.png',
+        'folder/file.txt',
+        'folder/nested/a.npy',
+        'folder/nested/b.npy',
+        'folder/nested/c.npy',
+    ])
+    check('v3', [
+        'just-a-file.txt',
+        'images/one.png',
+        'images/two.png',
+        'folder/file.txt',
+        'folder/nested/a.npy',
+        'folder/nested/b.npy',
+        'folder/nested/c.npy',
+    ])
+    check('v4', [
+        'just-a-file.txt',
+        'images/one.png',
+        'images/two.png',
+        'folder/file.txt',
+        'folder/nested/a.npy',
+        'folder/nested/b.npy',
+        'folder/nested/c.npy',
+    ])
+    check(Local, [
+        'just-a-file.txt',
+        'images/one.png',
+        'images/two.png',
+        'folder/file.txt',
+        'folder/nested/a.npy',
+        'folder/nested/b.npy',
+        'folder/nested/c.npy',
+        'new-file.txt',
+    ])
+
+    # wildcards
+    check('v4', [
+        'folder/nested/',
+    ], '*/*/')
+    check('v4', [
+        'just-a-file.txt',
+        'folder/file.txt',
+    ], '**/*.txt')
+    check(Local, [
+        'folder/nested/',
+    ], '*/*/')
+    check(Local, [
+        'just-a-file.txt',
+        'folder/file.txt',
+        'new-file.txt',
+    ], '**/*.txt')
 
 
-def test_from_here():
-    repo = Repository.from_here('data')
-    expected = Path(__file__).parent / 'data'
-    assert str(repo.root.resolve()) == str(expected.resolve())
+def test_resolve(git_repository):
+    repo = Repository(git_repository)
+    storage = repo.storage.levels[0].locations[0].root
+    for local in [
+        'just-a-file.txt',
+        'images/one.png',
+        'images/two.png',
+        'new-file.txt',
+        'images',
+    ]:
+        assert is_relative_to(repo.resolve(local, version=Local), git_repository)
+
+    for local in [
+        'folder/file.txt',
+        'folder/nested/a.npy',
+        'folder/nested/b.npy',
+        'folder/nested/c.npy',
+    ]:
+        is_relative_to(repo.resolve(local, version=Local), storage)
+
+    for local in [
+        'folder',
+        'folder/nested',
+    ]:
+        with pytest.raises(HashNotFound):
+            repo.resolve(local, version=Local)
+
+    for local in [
+        'another.file',
+        'folder/nested/a.npy',
+    ]:
+        assert is_relative_to(repo.resolve(local, version='v2'), storage)
+
+    with pytest.raises(HashNotFound):
+        repo.resolve('folder/nested', version='v3')
 
 
-def test_class_defaults(data_root):
-    repo = Repository(data_root, version=Local)
+def test_from_here(temp_repo_factory):
+    root = Path(__file__).resolve().parent.parent / 'some-repo'
+    root.mkdir()
+    with temp_repo_factory(root):
+        try:
+            repo = Repository.from_here('../some-repo')
+            assert repo.root.resolve() == root.resolve()
+        finally:
+            shutil.rmtree(root)
+
+
+def test_class_defaults(temp_repo):
+    repo = Repository(temp_repo, version=Local)
+    create_structure(temp_repo, {'4.png.hash': repo.storage.write(__file__)})
     repo.resolve('4.png')
 
 
 def test_hash_consistency(temp_repo):
     temp_repo = Repository(temp_repo)
-    add_file(temp_repo, Path(__file__), temp_repo.root / 'file.hash', True)
+    create_structure(temp_repo.root, {'file.hash': temp_repo.storage.write(__file__)})
 
     # ok
     file = 'file'
@@ -49,3 +164,12 @@ def test_hash_consistency(temp_repo):
     temp_repo = Repository(temp_repo.root, check=True)
     with pytest.raises(InconsistentHash):
         temp_repo.resolve(file, version=Local)
+
+
+def is_relative_to(this, *other):
+    # copied from pathlib, for <py3.9 support
+    try:
+        this.relative_to(*other)
+        return True
+    except ValueError:
+        return False

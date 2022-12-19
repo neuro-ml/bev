@@ -8,7 +8,7 @@ from tarn import StorageLevel
 from .base import StorageCluster
 from .hostname import StrHostName
 from ..exceptions import ConfigError
-from ..utils import PathLike
+from ..utils import PathOrStr
 
 CONFIG = '.bev.yml'
 
@@ -67,9 +67,9 @@ def _find_root(path, marker):
             return parent
 
 
-def find_repo_root(path: PathLike):
+def find_repo_root(path: PathOrStr):
     return _find_root(path, CONFIG)
 
 
-def find_vcs_root(path: PathLike):
+def find_vcs_root(path: PathOrStr):
     return _find_root(path, '.git')

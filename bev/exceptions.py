@@ -1,4 +1,8 @@
-class HashError(Exception):
+class BevError(Exception):
+    pass
+
+
+class HashError(BevError):
     pass
 
 
@@ -10,7 +14,7 @@ class InconsistentHash(HashError):
     pass
 
 
-class RepositoryError(Exception):
+class RepositoryError(BevError):
     pass
 
 
@@ -18,9 +22,13 @@ class RepositoryNotFound(RepositoryError):
     pass
 
 
+class NameConflict(RepositoryError):
+    pass
+
+
 class InconsistentRepositories(RepositoryError):
     pass
 
 
-class ConfigError(Exception):
+class ConfigError(BevError):
     pass

@@ -1,14 +1,22 @@
 from pathlib import Path
 from datetime import datetime
 
+import typer
 from tqdm.auto import tqdm
 
+from .app import app_command
 from ..hash import from_hash, is_hash
 from ..shortcuts import get_current_repo
 from ..utils import call_git
 
 
-def blame(path: Path, relative: str):
+@app_command
+def blame(
+        path: Path = typer.Argument(..., help='Path to the hash'),
+        relative: str = typer.Argument(..., help='The relative path inside the hashed folder')
+):
+    """Find the closest version which introduced a change to a value RELATIVE to the PATH"""
+
     repo = get_current_repo()
     path = Path(path).resolve().relative_to(repo.root)
     relative = str(relative)

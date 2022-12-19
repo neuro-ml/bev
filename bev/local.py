@@ -1,7 +1,7 @@
 class LocalVersion:
     """A class used to denote the current uncommitted version of data"""
 
-    def __getstate__(self):
+    def __getstate__(self):  # pragma: no cover
         raise RuntimeError('This object cannot be pickled')
 
     def __eq__(self, other):
