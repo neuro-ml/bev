@@ -7,7 +7,7 @@ from typing import Union
 
 from .exceptions import *
 
-PathOrStr = Union[str, PathLike[str]]
+PathOrStr = Union[str, PathLike]
 
 
 # TODO: use gitpython

@@ -10,7 +10,7 @@ from bev.testing import create_structure, TempDir
 runner = CliRunner()
 
 
-def test_add_relative(temp_repo_factory, temp_dir, data_root, tests_root, chdir):
+def test_add_relative(temp_repo_factory, temp_dir, chdir):
     temp_one, temp_two = temp_dir / 'one', temp_dir / 'two'
     with temp_repo_factory() as temp_repo_one, temp_repo_factory() as temp_repo_two:
         for root in temp_one, temp_two, temp_repo_one, temp_repo_two:
@@ -229,13 +229,13 @@ def test_conflict(temp_repo, chdir, sha256empty):
         # error
         result = runner.invoke(app, ['add', 'a', '--dst', 'b'])
         assert result.exit_code == 255
-        assert result.output == (
+        assert result.output.endswith(
             'HashError The destination "b.hash" already exists and no conflict resolution provided\n'
         )
         # not a file
         result = runner.invoke(app, ['add', 'a', '--dst', 'c', '--conflict', 'replace'])
         assert result.exit_code == 255
-        assert result.output == 'HashError The destination "c.hash" is not a file\n'
+        assert result.output.endswith('HashError The destination "c.hash" is not a file\n')
 
         # replace file
         result = runner.invoke(app, ['add', 'r1', '--dst', 'r2', '--conflict', 'replace'])
@@ -255,14 +255,14 @@ def test_conflict(temp_repo, chdir, sha256empty):
         # update wrong file
         result = runner.invoke(app, ['add', 'r7', '--dst', 'r8', '--conflict', 'update'])
         assert result.exit_code == 255
-        assert result.output == (
+        assert result.output.endswith(
             f'HashError The current ({sha256empty[:6]}...) and previous ({wrong_hash[:6]}...) '
             'versions do not match, which is required for the "update" conflict resolution\n'
         )
         # wrong hash kind
         result = runner.invoke(app, ['add', 'r9', '--dst', 'r10', '--conflict', 'update'])
         assert result.exit_code == 255
-        assert result.output == f'HashError The previous version (r10.hash) is not a file\n'
+        assert result.output.endswith(f'HashError The previous version (r10.hash) is not a file\n')
 
         # replace folder
         result = runner.invoke(app, ['add', 't1', '--dst', 't2', '--conflict', 'replace'])
@@ -286,11 +286,11 @@ def test_conflict(temp_repo, chdir, sha256empty):
         # update wrong folder
         result = runner.invoke(app, ['add', 't7', '--dst', 't8', '--conflict', 'update'])
         assert result.exit_code == 255
-        assert result.output == (
+        assert result.output.endswith(
             f'HashError The current ({sha256empty[:6]}...) and previous ({wrong_hash[:6]}...) '
             'versions do not match for "a.json", which is required for the "update" conflict resolution\n'
         )
         # wrong hash kind
         result = runner.invoke(app, ['add', 't9', '--dst', 't10', '--conflict', 'update'])
         assert result.exit_code == 255
-        assert result.output == f'HashError The previous version (t10.hash) is not a folder\n'
+        assert result.output.endswith(f'HashError The previous version (t10.hash) is not a folder\n')
