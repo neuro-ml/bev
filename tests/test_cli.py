@@ -1,5 +1,10 @@
+from pathlib import Path
+
+from tarn.config import root_params, load_config as load_storage_config
 from typer.testing import CliRunner
 
+from bev.cli.init import init_config
+from bev.config import load_config
 from bev import Repository
 from bev.cli.entrypoint import app
 from bev.hash import tree_to_hash
@@ -61,27 +66,21 @@ def test_pull(temp_repo, chdir):
             with open(file, 'r') as fd:
                 assert fd.read() == content
 
-# def test_init(tests_root, tmpdir):
-#     tmpdir = Path(tmpdir)
-#     _, group = root_params(tmpdir)
-#     permissions = 0o770
-#     folders = ['one', 'two', 'nested/folders', 'cache']
-#
-#     current = os.getcwd()
-#     try:
-#         os.chdir(tmpdir)
-#         config = load_config(tests_root / 'assets' / 'to-init.yml')
-#         init_config(config, permissions, group)
-#
-#         for folder in folders:
-#             folder = Path(folder)
-#
-#             assert folder.exists()
-#             assert (permissions, group) == root_params(folder)
-#             assert (folder / 'config.yml').exists()
-#             storage_config = load_storage_config(folder)
-#             assert storage_config.hash == config.meta.hash
-#             assert tuple(storage_config.levels) == (1, 31)
-#
-#     finally:
-#         os.chdir(current)
+
+def test_init(tests_root, temp_dir, chdir):
+    _, group = root_params(temp_dir)
+    folders = ['one', 'two', 'nested/folders', 'cache']
+
+    with chdir(temp_dir):
+        config = load_config(tests_root / 'assets' / 'to-init.yml')
+        init_config(config, '770', group)
+
+        for folder in folders:
+            folder = Path(folder)
+
+            assert folder.exists()
+            assert (0o770, group) == root_params(folder)
+            assert (folder / 'config.yml').exists()
+            storage_config = load_storage_config(folder)
+            assert storage_config.hash == config.meta.hash
+            assert tuple(storage_config.levels) == (1, 31)

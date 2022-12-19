@@ -41,6 +41,8 @@ def init_config(config, permissions, group):
         levels.extend(local.cache.index)
         levels.extend(local.cache.storage)
 
+    permissions, group = get_root_params(levels, permissions, group)
+
     for level in levels:
         for location in level.locations:
             storage_root = location.root
@@ -62,7 +64,7 @@ def get_root_params(levels, permissions, group):
     if permissions is None:
         print('Could not infer the permissions, please specify them explicitly with the "--permissions" option')
         raise typer.Exit(255)
-    if not set(permissions) <= set(range(8)):
+    if not set(permissions) <= set(map(str, range(8))):
         print(f'Wrong permissions mask format {permissions}')
         raise typer.Exit(255)
 
