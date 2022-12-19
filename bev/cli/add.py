@@ -7,6 +7,7 @@ from typing import Optional, List
 
 import typer
 from tqdm.auto import tqdm
+from rich.progress import track
 
 from .app import app_command
 from .utils import normalize_sources_and_destination
@@ -64,7 +65,7 @@ def _gather_and_write(source: PathOrStr, destination: PathOrStr, keep: bool, con
         if conflict != Conflict.replace:
             previous = load_hash(destination, storage)
 
-    current = gather(source, storage)
+    current = gather(source, storage, track)
     if previous is not None:
         if isinstance(current, dict):
             if not isinstance(previous, dict):

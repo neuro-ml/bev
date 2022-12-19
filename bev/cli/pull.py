@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional, List
 
 import typer
-from tqdm.auto import tqdm
+from rich.progress import track
 
 from .add import add
 from .app import cli_error, _app, app_command
@@ -85,7 +85,7 @@ def _pull(source, destination, mode, keep, repo):
                 f'The destination ({destination}) is a file, but the hash ({source}) contains a folder',
             )
 
-        for file, value in tqdm(h.items()):
+        for file, value in track(h.items(), total=len(h)):
             file = destination / file
             file.parent.mkdir(parents=True, exist_ok=True)
             PULL_MODES[mode](value, file, repo)

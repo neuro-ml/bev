@@ -1,9 +1,10 @@
 from enum import Enum
 from pathlib import Path
-from typing import Union
+from typing import Union, Callable
 
 from tarn import Storage
 
+from .config import identity
 from .hash import is_hash, load_key, is_tree, load_tree, from_hash, strip_tree, normalize_tree, HashType, tree_to_hash
 from .interface import Repository
 from .utils import PathOrStr
@@ -20,7 +21,7 @@ class Conflict(Enum):
     error = 'error'
 
 
-def gather(source: PathOrStr, storage: Union[Storage, Repository]) -> HashType:
+def gather(source: PathOrStr, storage: Union[Storage, Repository], progressbar: Callable = identity) -> HashType:
     source = Path(source)
     if not source.exists():
         # TODO
@@ -39,7 +40,7 @@ def gather(source: PathOrStr, storage: Union[Storage, Repository]) -> HashType:
     else:
         if source.is_dir():
             gathered = {}
-            for child in source.glob('**/*'):
+            for child in progressbar(source.glob('**/*')):
                 relative = child.relative_to(source)
                 if not child.is_dir():
                     if is_hash(child):
