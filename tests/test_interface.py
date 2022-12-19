@@ -98,7 +98,7 @@ def test_resolve(git_repository):
         'new-file.txt',
         'images',
     ]:
-        assert repo.resolve(local, version=Local).is_relative_to(git_repository)
+        assert is_relative_to(repo.resolve(local, version=Local), git_repository)
 
     for local in [
         'folder/file.txt',
@@ -106,7 +106,7 @@ def test_resolve(git_repository):
         'folder/nested/b.npy',
         'folder/nested/c.npy',
     ]:
-        repo.resolve(local, version=Local).is_relative_to(storage)
+        is_relative_to(repo.resolve(local, version=Local), storage)
 
     for local in [
         'folder',
@@ -119,7 +119,7 @@ def test_resolve(git_repository):
         'another.file',
         'folder/nested/a.npy',
     ]:
-        assert repo.resolve(local, version='v2').relative_to(storage)
+        assert is_relative_to(repo.resolve(local, version='v2'), storage)
 
     with pytest.raises(HashNotFound):
         repo.resolve('folder/nested', version='v3')
@@ -164,3 +164,12 @@ def test_hash_consistency(temp_repo):
     temp_repo = Repository(temp_repo.root, check=True)
     with pytest.raises(InconsistentHash):
         temp_repo.resolve(file, version=Local)
+
+
+def is_relative_to(this, *other):
+    # copied from pathlib, for <py3.9 support
+    try:
+        this.relative_to(*other)
+        return True
+    except ValueError:
+        return False
