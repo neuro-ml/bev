@@ -4,6 +4,7 @@ on: [ pull_request ]
 
 env:
   MODULE_NAME: bev
+  CI: true
 
 jobs:
   test:

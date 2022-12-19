@@ -76,8 +76,11 @@ def git_repository():
         make_repo(repo, tmp / 'storage')
 
         with _chdir(repo):
-            subprocess.call(['git', 'config', '--global', 'user.email', 'you@example.com'], cwd=repo)
-            subprocess.call(['git', 'config', '--global', 'user.name', 'Name'], cwd=repo)
+            # we don't want to mess up our personal config
+            if 'CI' in os.environ:
+                subprocess.call(['git', 'config', '--global', 'user.email', 'you@example.com'], cwd=repo)
+                subprocess.call(['git', 'config', '--global', 'user.name', 'Name'], cwd=repo)
+
             subprocess.call(['git', 'init'], cwd=repo)
             create_structure(repo, [
                 'just-a-file.txt',
