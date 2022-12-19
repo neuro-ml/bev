@@ -54,6 +54,11 @@ def chdir():
     return _chdir
 
 
+@pytest.fixture
+def temp_dir(tmpdir):
+    return Path(tmpdir)
+
+
 @pytest.fixture(scope='session')
 def git_repository():
     def freeze(tag):
@@ -71,6 +76,8 @@ def git_repository():
         make_repo(repo, tmp / 'storage')
 
         with _chdir(repo):
+            subprocess.call(['git', 'config', '--global', 'user.email', 'you@example.com'], cwd=repo)
+            subprocess.call(['git', 'config', '--global', 'user.name', 'Name'], cwd=repo)
             subprocess.call(['git', 'init'], cwd=repo)
             create_structure(repo, [
                 'just-a-file.txt',
