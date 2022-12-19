@@ -18,11 +18,11 @@ def _fetch(repo: Repository, path: Path):
     key = load_key(path)
     if is_tree(key):
         key = strip_tree(key)
-        keys = repo.storage.read(load_tree, key).values()
+        keys = list(set(repo.storage.read(load_tree, key).values()))
     else:
         keys = [key]
 
-    missing = repo.storage.fetch(keys, verbose=True)
+    missing = set(keys) - set(repo.storage.fetch(keys, verbose=True, legacy=False))
     if missing:
         raise HashNotFound(f'Could not fetch {len(missing)} key(s) from remote')
 
