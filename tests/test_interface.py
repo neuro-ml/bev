@@ -20,7 +20,7 @@ def test_glob(git_repository):
             pattern = '**/*'
         assert set(repo.glob(pattern, version=version)) == expected
 
-    repo = Repository(git_repository / 'bev_repo')
+    repo = Repository(git_repository / 'bev-repo')
     # all content
     check('v1', [
         'just-a-file.txt',
@@ -89,7 +89,7 @@ def test_glob(git_repository):
 
 
 def test_resolve(git_repository):
-    repo = Repository(git_repository / 'bev_repo')
+    repo = Repository(git_repository / 'bev-repo')
     storage = repo.storage.levels[0].locations[0].root
     for local in [
         'just-a-file.txt',
