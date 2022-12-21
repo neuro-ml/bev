@@ -1,3 +1,4 @@
+import os
 import shlex
 import subprocess
 from abc import abstractmethod
@@ -5,11 +6,13 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Union, Sequence, NamedTuple
 
+from .config import find_vcs_root
+from .local import LocalVersion
+
 # from dulwich.object_store import tree_lookup_path
 # from dulwich.objects import Commit
 # from dulwich.repo import Repo
 
-from .local import LocalVersion
 
 CommittedVersion = str
 Version = Union[CommittedVersion, LocalVersion]
@@ -47,6 +50,10 @@ class VC:
 
 
 class SubprocessGit(VC):
+    def __init__(self, root: Path):
+        super().__init__(root)
+        self._git_root = None
+
     def read(self, relative: str, version: CommittedVersion) -> Union[str, None]:
         if not relative.startswith('./'):
             relative = f'./{relative}'
@@ -67,9 +74,22 @@ class SubprocessGit(VC):
             return self._call_git(f'git log -n 1 {n} --pretty=format:%H -- {relative}', self.root) or None
 
     def list_dir(self, relative: str, version: CommittedVersion) -> Sequence[TreeEntry]:
+        if self._git_root is None:
+            self._git_root = find_vcs_root(self.root)
+        if self._git_root is None:
+            raise FileNotFoundError(f'The folder {self.root} is not inside a git repository')
+
+        git_relative = os.path.normpath(os.fspath((self.root / relative).relative_to(self._git_root)))
+        suffix = f':{git_relative}' if git_relative != '.' else ''
         result = []
-        suffix = f':{relative}' if relative != '.' else ''
-        for line in self._call_git(f'git ls-tree {version}{suffix}', self.root).splitlines():
+        try:
+            lines = self._call_git(f'git ls-tree {version}{suffix}', self._git_root).splitlines()
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 128:
+                raise FileNotFoundError(f'The object {git_relative} not found for version {version}') from None
+            raise
+
+        for line in lines:
             mode, kind, rest = line.split(' ', 2)
             _, name = rest.split('\t')
             result.append(TreeEntry(name, kind == 'tree', kind == 'link'))
