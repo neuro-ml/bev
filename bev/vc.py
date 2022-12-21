@@ -79,14 +79,14 @@ class SubprocessGit(VC):
         if self._git_root is None:
             raise FileNotFoundError(f'The folder {self.root} is not inside a git repository')
 
-        relative = os.fspath((self.root / relative).relative_to(self._git_root))
-        suffix = f':{relative}' if relative != '.' else ''
+        git_relative = os.path.normpath(os.fspath((self.root / relative).relative_to(self._git_root)))
+        suffix = f':{git_relative}' if git_relative != '.' else ''
         result = []
         try:
             lines = self._call_git(f'git ls-tree {version}{suffix}', self._git_root).splitlines()
         except subprocess.CalledProcessError as e:
             if e.returncode == 128:
-                raise FileNotFoundError(f'The object {self.root / relative} not found for version {version}') from None
+                raise FileNotFoundError(f'The object {git_relative} not found for version {version}') from None
             raise
 
         for line in lines:
