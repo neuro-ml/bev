@@ -1,8 +1,35 @@
+import subprocess
 from contextlib import suppress
 
 import pytest
 
-from bev.vc import SubprocessGit
+from bev.vc import SubprocessGit, TreeEntry
+
+
+def test_subprocess_git(temp_dir):
+    subprocess.check_call(['git', 'init'], cwd=temp_dir)
+    nested = temp_dir / 'folder/nested'
+    nested.mkdir(parents=True)
+    (nested / 'a').touch()
+    (nested / 'b').touch()
+    subprocess.check_call(['git', 'add', '.'], cwd=temp_dir)
+    subprocess.check_call(['git', 'commit', '-m', 'empty'], cwd=temp_dir)
+    subprocess.check_call(['git', 'tag', 'v1'], cwd=temp_dir)
+
+    # same as git
+    vc = SubprocessGit(temp_dir)
+    assert vc.list_dir('.', 'v1') == [TreeEntry('folder', True, False)]
+    assert vc.list_dir('folder', 'v1') == [TreeEntry('nested', True, False)]
+    assert set(vc.list_dir('folder/nested', 'v1')) == {TreeEntry('a', False, False), TreeEntry('b', False, False)}
+    with pytest.raises(FileNotFoundError):
+        vc.list_dir('missing', 'v1')
+
+    # nested
+    vc = SubprocessGit(nested.parent)
+    assert vc.list_dir('.', 'v1') == [TreeEntry('nested', True, False)]
+    assert set(vc.list_dir('nested', 'v1')) == {TreeEntry('a', False, False), TreeEntry('b', False, False)}
+    with pytest.raises(FileNotFoundError):
+        vc.list_dir('missing', 'v1')
 
 
 # @pytest.mark.xfail

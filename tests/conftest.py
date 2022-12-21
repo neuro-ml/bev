@@ -72,17 +72,18 @@ def git_repository():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         repo = tmp / 'repo'
-        repo.mkdir()
-        make_repo(repo, tmp / 'storage')
+        bev_repo = repo / 'bev-repo'
+        bev_repo.mkdir(parents=True)
+        make_repo(bev_repo, tmp / 'storage')
 
-        with _chdir(repo):
+        with _chdir(bev_repo):
             # we don't want to mess up our personal config
             if 'CI' in os.environ:
                 subprocess.call(['git', 'config', '--global', 'user.email', 'you@example.com'], cwd=repo)
                 subprocess.call(['git', 'config', '--global', 'user.name', 'Name'], cwd=repo)
 
             subprocess.call(['git', 'init'], cwd=repo)
-            create_structure(repo, [
+            create_structure(bev_repo, [
                 'just-a-file.txt',
                 'another.file',
                 'images/one.png',
