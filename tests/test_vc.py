@@ -31,6 +31,13 @@ def test_subprocess_git(temp_dir):
     with pytest.raises(FileNotFoundError):
         vc.list_dir('missing', 'v1')
 
+    # nested but with denormalized root
+    vc = SubprocessGit(nested / '..')
+    assert vc.list_dir('.', 'v1') == [TreeEntry('nested', True, False)]
+    assert set(vc.list_dir('nested', 'v1')) == {TreeEntry('a', False, False), TreeEntry('b', False, False)}
+    with pytest.raises(FileNotFoundError):
+        vc.list_dir('missing', 'v1')
+
 
 # @pytest.mark.xfail
 # @pytest.mark.parametrize('version', [
