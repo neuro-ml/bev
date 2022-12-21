@@ -123,15 +123,17 @@ class Repository:
 
         relative = self._normalize_relative(*parts)
         version = self._resolve_version(version)
+        fetch = self._resolve_fetch(fetch)
+        check = self._resolve_check(check)
+
         absolute = self.root / relative
         if version == Local and absolute.exists():
             if to_hash(absolute).exists():
                 raise NameConflict(f'Both the path "{relative}" and its hash "{to_hash(relative)}" found')
             return absolute.resolve()
 
-        check = self._resolve_check(check)
         key = self.get_key(relative, version=version, fetch=fetch)
-        return self.storage.read(_resolve, key, fetch=self._resolve_fetch(fetch))
+        return self.storage.read(_resolve, key, fetch=fetch)
 
     def glob(self, *parts: PathOrStr, version: Version = None, fetch: bool = None) -> Sequence[Path]:
         """
@@ -148,6 +150,7 @@ class Repository:
             means that the local (possibly uncommitted) version of the files will be used
         """
         version = self._resolve_version(version)
+        fetch = self._resolve_fetch(fetch)
         pattern = os.path.join(*parts)
 
         if version == Local:
