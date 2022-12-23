@@ -1,14 +1,15 @@
-from pathlib import Path
+import grp
+import os
+import shutil
 
 from tarn.config import root_params, load_config as load_storage_config
 from typer.testing import CliRunner
 
-from bev.cli.init import init_config
-from bev.config import load_config
 from bev import Repository
 from bev.cli.entrypoint import app
+from bev.config import load_config
 from bev.hash import tree_to_hash
-from bev.testing import create_structure
+from bev.testing import create_structure, TempDir
 
 runner = CliRunner()
 
@@ -67,20 +68,75 @@ def test_pull(temp_repo, chdir):
                 assert fd.read() == content
 
 
-def test_init(tests_root, temp_dir, chdir):
-    _, group = root_params(temp_dir)
+def test_init(tests_root, chdir):
     folders = ['one', 'two', 'nested/folders', 'cache']
 
-    with chdir(temp_dir):
-        config = load_config(tests_root / 'assets' / 'to-init.yml')
-        init_config(config, '770', group)
+    def clear_storage():
+        for f in list(storage.iterdir()):
+            shutil.rmtree(f)
+
+    with TempDir() as storage, TempDir() as repo:
+        config_path = repo / '.bev.yml'
+        with open(config_path, 'w') as fd:
+            fd.write(
+                # language=yaml
+                '''
+main:
+  storage:
+    - root: '{0}/one'
+    - root: '{0}/two'
+    - root: '{0}/nested/folders'
+
+  cache:
+    - root: '{0}/cache'
+
+meta:
+  hash: sha256
+        '''.format(storage))
+        config = load_config(config_path)
+
+        result = runner.invoke(app, ['init'])
+        assert result.exit_code == 255
+        assert result.output == 'RepositoryNotFound .bev.yml files not found among folder\'s parents\n'
+
+        result = runner.invoke(app, ['init', '--repo', str(repo)])
+        assert result.exit_code == 0
 
         for folder in folders:
-            folder = Path(folder)
+            folder = storage / folder
 
             assert folder.exists()
-            assert (0o770, group) == root_params(folder)
             assert (folder / 'config.yml').exists()
             storage_config = load_storage_config(folder)
             assert storage_config.hash == config.meta.hash
             assert tuple(storage_config.levels) == (1, 31)
+
+        clear_storage()
+        group_id = sorted(os.getgroups())[0]
+        group = grp.getgrgid(group_id).gr_name
+        result = runner.invoke(app, ['init', '--repo', str(repo), '--permissions', '770', '--group', group])
+        assert result.exit_code == 0
+
+        for folder in folders:
+            folder = storage / folder
+
+            assert folder.exists()
+            assert (folder / 'config.yml').exists()
+            assert (0o770, group_id) == root_params(folder)
+            storage_config = load_storage_config(folder)
+            assert storage_config.hash == config.meta.hash
+            assert tuple(storage_config.levels) == (1, 31)
+
+        clear_storage()
+        with chdir(repo):
+            result = runner.invoke(app, ['init'])
+            assert result.exit_code == 0
+
+            for folder in folders:
+                folder = storage / folder
+
+                assert folder.exists()
+                assert (folder / 'config.yml').exists()
+                storage_config = load_storage_config(folder)
+                assert storage_config.hash == config.meta.hash
+                assert tuple(storage_config.levels) == (1, 31)
