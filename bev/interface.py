@@ -1,6 +1,5 @@
 import inspect
 import os
-import warnings
 from functools import lru_cache
 from pathlib import Path
 from typing import Sequence, Union
@@ -24,7 +23,7 @@ class Repository:
     Parameters
     ----------
     root:
-        the path to the repository's root, i.e. the folder that contains `.bev.config`
+        the path to the repository's root, i.e. the folder that contains `.bev.yml`
     fetch: bool
         whether to fetch files from remote locations when needed.
         Can be overridden in corresponding methods
@@ -72,16 +71,11 @@ class Repository:
 
         return cls(configs[0].parent)
 
-    @property
-    def current_version(self) -> CommittedVersion:
-        warnings.warn('This property is deprecated, use `latest_version()` instead', DeprecationWarning)
-        return self.latest_version()
-
     def latest_version(self, path: PathOrStr = '.', *, default=inspect.Parameter.empty) -> CommittedVersion:
         """
         Get the last commit given the relative `path`.
         """
-        path = self._normalize_relative(path)
+        path = self._resolve_relative(path)
         if not (self.root / path).exists() and not is_hash(path):
             path = to_hash(path)
 
@@ -108,7 +102,7 @@ class Repository:
             the data version. Can be either a string with a commit hash/tag or the `Local` object, which
             means that the local (possibly uncommitted) version of the files will be used
         check: bool
-            default value for `resolve` mode. If True - the file's hash will be additionally checked for consistency
+            if True - the file's hash will be additionally checked for consistency
         """
 
         def _resolve(path):
@@ -121,7 +115,7 @@ class Repository:
 
             return path
 
-        relative = self._normalize_relative(*parts)
+        relative = self._resolve_relative(*parts)
         version = self._resolve_version(version)
         fetch = self._resolve_fetch(fetch)
         check = self._resolve_check(check)
@@ -166,7 +160,7 @@ class Repository:
     def get_key(self, *parts: PathOrStr, version: Version = None, fetch: bool = None,
                 error: bool = True) -> Union[Key, None]:
         version = self._resolve_version(version)
-        path = self._normalize_relative(*parts)
+        path = self._resolve_relative(*parts)
         try:
             h = self._split(path, version)
         except HashNotFound:
@@ -179,12 +173,12 @@ class Repository:
 
         h, relative = h
         if relative == '.':
-            raise HashNotFound(f'"{str(path)}" is a hashed folder')
+            raise HashNotFound(f'"{path}" is a hashed folder')
 
         tree = self._get_tree(h, version, fetch)
         if relative not in tree:
             if relative in self._expand_folders(tree):
-                raise HashNotFound(f'"{str(path)}" is a folder inside a tree hash')
+                raise HashNotFound(f'"{path}" is a folder inside a tree hash')
 
             if error:
                 raise HashNotFound(str(path))
@@ -193,7 +187,7 @@ class Repository:
         return tree[relative]
 
     def load_tree(self, path: PathOrStr, version: Version = None, fetch: bool = None) -> dict:
-        path = self._normalize_relative(path)
+        path = self._resolve_relative(path)
         version = self._resolve_version(version)
         key = self._get_hash(Path(path), version)
         if key is None:
@@ -221,10 +215,6 @@ class Repository:
 
     # internal logic
 
-    def _normalize_relative(self, *parts):
-        # TODO: check that it's not a hash path
-        return self.prefix / Path(*parts)
-
     def _get_tree(self, key, version, fetch):
         # we need the version here, because we want to cache only a committed tree
         if version == Local:
@@ -235,20 +225,16 @@ class Repository:
     def _load_cached_tree(self, key, fetch):
         return self._load(load_tree, key, fetch=fetch)
 
-    def _get_hash(self, path: Path, version: Version):
+    def _get_hash(self, relative: PathOrStr, version: Version):
         if version == Local:
-            return self._get_uncomitted_hash(path)
-        return self._get_committed_hash(path, version)
+            path = self.root / relative
+            if path.exists():
+                return load_key(path)
+            return
 
-    def _get_uncomitted_hash(self, relative: Path):
-        path = self.root / relative
-        if path.exists():
-            return load_key(path)
-
-    @lru_cache(None)
-    def _get_committed_hash(self, relative: Path, version: CommittedVersion):
-        assert isinstance(version, CommittedVersion), type(version)
-        return self.vc.read(str(relative), version)
+        else:
+            assert isinstance(version, CommittedVersion), type(version)
+            return self.vc.read(str(relative), version)
 
     def _load(self, func, key, fetch):
         fetch = self._resolve_fetch(fetch)
@@ -289,6 +275,11 @@ class Repository:
         if version is None:
             raise ValueError('The argument `version` must be provided')
         return version
+
+    def _resolve_relative(self, *parts):
+        if not parts:
+            return self.prefix
+        return self.prefix / Path(*parts)
 
     @staticmethod
     def _expand_folders(tree) -> set:
