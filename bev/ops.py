@@ -25,19 +25,22 @@ class Conflict(Enum):
     error = 'error'
 
 
-def gather(source: PathOrStr, storage: Union[Storage, Repository], progressbar: Callable = identity) -> HashType:
+def gather(source: PathOrStr, storage: Union[Storage, Repository], progressbar: Callable = identity,
+           fetch: bool = None) -> HashType:
     source = Path(source)
     if not source.exists():
         # TODO
         raise FileNotFoundError(source)
 
     if isinstance(storage, Repository):
+        if fetch is None:
+            fetch = storage.fetch
         storage = storage.storage
 
     if is_hash(source):
         key = load_key(source)
         if is_tree(key):
-            gathered = normalize_tree(storage.read(load_tree, strip_tree(key)), storage.digest_size)
+            gathered = normalize_tree(storage.read(load_tree, strip_tree(key), fetch=fetch), storage.digest_size)
         else:
             gathered = key
 
@@ -50,7 +53,7 @@ def gather(source: PathOrStr, storage: Union[Storage, Repository], progressbar: 
                     if is_hash(child):
                         key = load_key(child)
                         if is_tree(key):
-                            key = storage.read(load_tree, strip_tree(key))
+                            key = storage.read(load_tree, strip_tree(key), fetch=fetch)
 
                         gathered[from_hash(relative)] = key
 
@@ -66,10 +69,10 @@ def gather(source: PathOrStr, storage: Union[Storage, Repository], progressbar: 
     return gathered
 
 
-def load_hash(path: PathOrStr, storage) -> HashType:
+def load_hash(path: PathOrStr, storage, fetch: bool = False) -> HashType:
     key = load_key(path)
     if is_tree(key):
-        return normalize_tree(storage.read(load_tree, strip_tree(key)), storage.digest_size)
+        return normalize_tree(storage.read(load_tree, strip_tree(key), fetch=fetch), storage.digest_size)
     return key
 
 

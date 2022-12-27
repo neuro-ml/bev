@@ -39,6 +39,7 @@ def pull(
                  'If none -  the results will be stored alongside the source'
         ),
         keep: bool = typer.Option(False, help='Whether to keep the sources after pulling the real files'),
+        fetch: bool = typer.Option(False, help='Whether to fetch the missing files from remote, if possible'),
         repository: Path = typer.Option(
             None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
@@ -81,16 +82,16 @@ def pull(
             # TODO: warn
             continue
 
-        _pull(source, destination, mode, keep, repo)
+        _pull(source, destination, mode, keep, repo, fetch)
 
 
-def _pull(source, destination, mode, keep, repo):
+def _pull(source, destination, mode, keep, repo, fetch):
     def add_ext(p):
         if mode is PullMode.hash and not is_hash(p):
             p = to_hash(p)
         return p
 
-    h = load_hash(source, repo.storage)
+    h = load_hash(source, repo.storage, fetch)
     if isinstance(h, dict):
         if destination.is_file():
             raise cli_error(
@@ -101,7 +102,7 @@ def _pull(source, destination, mode, keep, repo):
         for file, value in track(h.items(), total=len(h)):
             file = add_ext(destination / file)
             file.parent.mkdir(parents=True, exist_ok=True)
-            PULL_MODES[mode](value, file, repo)
+            PULL_MODES[mode](value, file, repo, fetch)
 
     else:
         destination = add_ext(destination)
@@ -115,19 +116,19 @@ def _pull(source, destination, mode, keep, repo):
             # TODO: warn
             return
 
-        PULL_MODES[mode](h, destination, repo)
+        PULL_MODES[mode](h, destination, repo, fetch)
 
     if not keep:
         os.remove(source)
 
 
-def save_hash(value, file, repo):
+def save_hash(value, file, repo, fetch):
     with open(file, 'w') as f:
         f.write(value)
 
 
 PULL_MODES = {
-    PullMode.copy: lambda h, dst, repo: repo.storage.read(shutil.copyfile, h, dst),
+    PullMode.copy: lambda h, dst, repo, fetch: repo.storage.read(shutil.copyfile, h, dst, fetch=fetch),
     PullMode.hash: save_hash,
 }
 

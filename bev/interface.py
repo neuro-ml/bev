@@ -41,7 +41,7 @@ class Repository:
         self.prefix = Path()
         self.storage, self.cache = build_storage(self.root)
         self.vc: VC = SubprocessGit(self.root)
-        self._fetch, self._version, self._check = fetch, version, check
+        self.fetch, self.version, self.check = fetch, version, check
         self._cache = {}
 
     @classmethod
@@ -203,7 +203,7 @@ class Repository:
         if other.is_absolute():
             raise ValueError('Only relative paths are supported')
 
-        child = Repository(self.root, fetch=self._fetch, version=self._version, check=self._check)
+        child = Repository(self.root, fetch=self.fetch, version=self.version, check=self.check)
         # FIXME
         child.prefix = self.prefix / other
         child._cache = self._cache
@@ -261,17 +261,17 @@ class Repository:
 
     def _resolve_check(self, check):
         if check is None:
-            return self._check
+            return self.check
         return check
 
     def _resolve_fetch(self, fetch):
         if fetch is None:
-            return self._fetch
+            return self.fetch
         return fetch
 
     def _resolve_version(self, version):
         if version is None:
-            version = self._version
+            version = self.version
         if version is None:
             raise ValueError('The argument `version` must be provided')
         return version
