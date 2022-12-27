@@ -11,13 +11,17 @@ from .utils import PathOrStr
 
 
 class Conflict(Enum):
-    # add new entries, check for collisions
+    """
+    Conflict resolution policy, in case the destination already exists:
+
+    update - add new entries and check for collisions
+    override - add new entries, overwrite the colliding parts
+    replace - remove the previous entries
+    error - no previous entries should exist
+    """
     update = 'update'
-    # overwrite everything
     override = 'override'
-    # remove the previous value
     replace = 'replace'
-    # no previous value should exist
     error = 'error'
 
 

@@ -17,18 +17,26 @@ from ..ops import load_hash, Conflict
 
 
 class PullMode(Enum):
-    copy = 'copy'
+    """
+    How to restore the files:
+
+    hash - restore the file hash. Useful for basic files/folders manipulation, e.g. removing parts of a tree
+
+    copy - copy the files. Useful for making changes to files' contents
+    """
+
     hash = 'hash'
+    copy = 'copy'
 
 
 @app_command
 def pull(
         sources: List[Path] = typer.Argument(..., help='The source paths to add', show_default=False),
-        mode: PullMode = typer.Option(..., help='Pull mode', show_default=False),
+        mode: PullMode = typer.Option(..., help=PullMode.__doc__, show_default=False),
         destination: Optional[Path] = typer.Option(
             None, '--destination', '--dst',
-            help='The destination at which the hashes will be stored. '
-                 'If none -  the hashes will be stored alongside the source'
+            help='The destination at which the results will be stored. '
+                 'If none -  the results will be stored alongside the source'
         ),
         keep: bool = typer.Option(False, help='Whether to keep the sources after pulling the real files'),
         repository: Path = typer.Option(
@@ -73,10 +81,15 @@ def pull(
             # TODO: warn
             continue
 
-        _pull(source, destination, mode.name, keep, repo)
+        _pull(source, destination, mode, keep, repo)
 
 
 def _pull(source, destination, mode, keep, repo):
+    def add_ext(p):
+        if mode is PullMode.hash and not is_hash(p):
+            p = to_hash(p)
+        return p
+
     h = load_hash(source, repo.storage)
     if isinstance(h, dict):
         if destination.is_file():
@@ -86,16 +99,21 @@ def _pull(source, destination, mode, keep, repo):
             )
 
         for file, value in track(h.items(), total=len(h)):
-            file = destination / file
+            file = add_ext(destination / file)
             file.parent.mkdir(parents=True, exist_ok=True)
             PULL_MODES[mode](value, file, repo)
 
     else:
+        destination = add_ext(destination)
         if destination.is_dir():
             raise cli_error(
                 OSError,
                 f'The destination ({destination}) is a folder, but the hash ({source}) contains a single file',
             )
+
+        if source == destination:
+            # TODO: warn
+            return
 
         PULL_MODES[mode](h, destination, repo)
 
@@ -104,13 +122,13 @@ def _pull(source, destination, mode, keep, repo):
 
 
 def save_hash(value, file, repo):
-    with open(to_hash(file), 'w') as f:
+    with open(file, 'w') as f:
         f.write(value)
 
 
 PULL_MODES = {
-    'copy': lambda h, dst, repo: repo.storage.read(shutil.copyfile, h, dst),
-    'hash': save_hash,
+    PullMode.copy: lambda h, dst, repo: repo.storage.read(shutil.copyfile, h, dst),
+    PullMode.hash: save_hash,
 }
 
 

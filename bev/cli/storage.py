@@ -11,7 +11,7 @@ from .app import app_command, cli_error
 
 # because typer can't just accept a list of choices
 def upd(d):
-    for algo in hashlib.algorithms_guaranteed:
+    for algo in sorted(hashlib.algorithms_guaranteed):
         d[algo] = algo
 
 

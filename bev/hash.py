@@ -8,6 +8,7 @@ from typing import NamedTuple, Dict, Union
 from tarn import Storage
 
 from .utils import PathOrStr, deprecate
+from .exceptions import HashError
 
 Key = str
 Tree = Dict[PathOrStr, Union[Key, Dict]]
@@ -20,15 +21,15 @@ def is_hash(path: PathOrStr):
 
 def to_hash(path: PathOrStr):
     path = Path(path)
-    # TODO:
-    assert not is_hash(path)
+    if is_hash(path):
+        raise HashError('The path is already a hash')
     return path.with_name(f'{path.name}.hash')
 
 
 def from_hash(path: PathOrStr):
     path = Path(path)
-    # TODO
-    assert is_hash(path)
+    if not is_hash(path):
+        raise HashError('The path is already not a hash')
     return path.with_name(path.stem)
 
 
