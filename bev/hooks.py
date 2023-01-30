@@ -1,7 +1,7 @@
 import pluggy
 
 from . import hookspecs
-from .config import *
+from .config import *  # noqa
 
 manager = pluggy.PluginManager('bev')
 manager.add_hookspecs(hookspecs)

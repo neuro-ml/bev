@@ -75,6 +75,7 @@ class SubprocessGit(VC):
         with suppress(subprocess.CalledProcessError):
             return self._call_git(f'git log -n 1 {n} --pretty=format:%H -- {relative}', self.root) or None
 
+    @lru_cache(None)
     def list_dir(self, relative: str, version: CommittedVersion) -> Sequence[TreeEntry]:
         if self._git_root is None:
             self._git_root = find_vcs_root(self.root)

@@ -1,4 +1,5 @@
 include README.md
 include LICENSE
 include requirements.txt
+include bev/py.typed
 recursive-include bev *.py

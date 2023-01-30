@@ -2,7 +2,7 @@ import inspect
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Sequence, Union, Optional
 
 from tarn.digest import digest_file
 from wcmatch.glob import GLOBSTAR
@@ -36,7 +36,7 @@ class Repository:
         Can be overridden in corresponding methods
     """
 
-    def __init__(self, *root: PathOrStr, fetch: bool = True, version: Version = None, check: bool = False):
+    def __init__(self, *root: PathOrStr, fetch: bool = True, version: Optional[Version] = None, check: bool = False):
         self.root = Path(*root)
         self.prefix = Path()
         self.storage, self.cache = build_storage(self.root)
@@ -45,8 +45,8 @@ class Repository:
         self._cache = {}
 
     @classmethod
-    def from_here(cls, *relative: PathOrStr, fetch: bool = True, version: Version = None,
-                  check: bool = None) -> 'Repository':
+    def from_here(cls, *relative: PathOrStr, fetch: bool = True, version: Optional[Version] = None,
+                  check: Optional[bool] = None) -> 'Repository':
         """
         Creates a repository with a path `relative` to the file in which this method is called.
 
@@ -88,7 +88,8 @@ class Repository:
 
         return version
 
-    def resolve(self, *parts: PathOrStr, version: Version = None, fetch: bool = None, check: bool = None) -> Path:
+    def resolve(self, *parts: PathOrStr, version: Optional[Version] = None, fetch: Optional[bool] = None,
+                check: Optional[bool] = None) -> Path:
         """
         Get the real path of a file in the repository
 
@@ -129,7 +130,8 @@ class Repository:
         key = self.get_key(relative, version=version, fetch=fetch)
         return self.storage.read(_resolve, key, fetch=fetch)
 
-    def glob(self, *parts: PathOrStr, version: Version = None, fetch: bool = None) -> Sequence[Path]:
+    def glob(self, *parts: PathOrStr, version: Optional[Version] = None,
+             fetch: Optional[bool] = None) -> Sequence[Path]:
         """
         Get all the paths in the repository that match a given pattern
 
@@ -157,7 +159,7 @@ class Repository:
         return list(map(Path, glob.glob()))
 
     # TODO: cache this based on path parents
-    def get_key(self, *parts: PathOrStr, version: Version = None, fetch: bool = None,
+    def get_key(self, *parts: PathOrStr, version: Optional[Version] = None, fetch: Optional[bool] = None,
                 error: bool = True) -> Union[Key, None]:
         version = self._resolve_version(version)
         path = self._resolve_relative(*parts)
@@ -186,7 +188,7 @@ class Repository:
 
         return tree[relative]
 
-    def load_tree(self, path: PathOrStr, version: Version = None, fetch: bool = None) -> dict:
+    def load_tree(self, path: PathOrStr, version: Optional[Version] = None, fetch: Optional[bool] = None) -> dict:
         path = self._resolve_relative(path)
         version = self._resolve_version(version)
         key = self._get_hash(Path(path), version)
@@ -269,7 +271,7 @@ class Repository:
             return self.fetch
         return fetch
 
-    def _resolve_version(self, version):
+    def _resolve_version(self, version) -> Version:
         if version is None:
             version = self.version
         if version is None:

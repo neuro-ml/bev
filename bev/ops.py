@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Union, Callable
+from typing import Union, Callable, Optional
 
 from tarn import Storage
 
@@ -26,7 +26,7 @@ class Conflict(Enum):
 
 
 def gather(source: PathOrStr, storage: Union[Storage, Repository], progressbar: Callable = identity,
-           fetch: bool = None) -> HashType:
+           fetch: Optional[bool] = None) -> HashType:
     source = Path(source)
     if not source.exists():
         # TODO

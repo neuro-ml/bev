@@ -33,7 +33,7 @@ def init(
 def init_config(config, permissions, group):
     local, meta = config.local, config.meta
     if meta.hash is None:
-        raise ValueError('The config\'s `meta` must contain a `hash` key')
+        raise ValueError("The config's `meta` must contain a `hash` key")
 
     levels = list(local.storage)
     if local.cache is not None:
