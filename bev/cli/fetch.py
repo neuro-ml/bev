@@ -16,11 +16,11 @@ def _fetch(repo: Repository, path: Path):
     key = load_key(path)
     if is_tree(key):
         key = strip_tree(key)
-        keys = list(set(repo.storage.read(load_tree, key).values()))
+        keys = list(set(repo.storage.read(load_tree, key, fetch=True).values()))
     else:
         keys = [key]
 
-    desc = f'Fetching {from_hash(path)}'
+    desc = str(from_hash(path))
     if len(desc) > 30:
         desc = desc[:27] + '...'
 

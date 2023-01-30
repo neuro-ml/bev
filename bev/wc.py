@@ -1,10 +1,9 @@
-from functools import lru_cache
 from pathlib import Path
 from typing import Optional, AnyStr, Iterator, Tuple, NamedTuple
 
 from wcmatch.glob import Glob
-from .exceptions import NameConflict
 
+from .exceptions import NameConflict
 from .hash import is_hash, from_hash, to_hash, is_tree, load_key, strip_tree, load_tree
 from .vc import VC, TreeEntry
 
@@ -164,7 +163,6 @@ class BevVCGlob(BevGlob):
         super().__init__(pattern, repo_root, relative, version, cache, storage, fetch, flags)
         self._vc = vc
 
-    @lru_cache(None)
     def _list_dir(self, relative: Path):
         return self._vc.list_dir(str(relative), self._version)
 

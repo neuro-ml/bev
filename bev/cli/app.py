@@ -2,7 +2,7 @@ from functools import wraps
 
 import typer
 
-from bev.exceptions import BevError
+from ..exceptions import BevError
 
 _app = typer.Typer()
 

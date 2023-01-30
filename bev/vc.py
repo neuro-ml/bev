@@ -3,6 +3,7 @@ import shlex
 import subprocess
 from abc import abstractmethod
 from contextlib import suppress
+from functools import lru_cache
 from pathlib import Path
 from typing import Union, Sequence, NamedTuple
 
@@ -54,6 +55,7 @@ class SubprocessGit(VC):
         super().__init__(root)
         self._git_root = None
 
+    @lru_cache(None)
     def read(self, relative: str, version: CommittedVersion) -> Union[str, None]:
         if not relative.startswith('./'):
             relative = f'./{relative}'
@@ -73,6 +75,7 @@ class SubprocessGit(VC):
         with suppress(subprocess.CalledProcessError):
             return self._call_git(f'git log -n 1 {n} --pretty=format:%H -- {relative}', self.root) or None
 
+    @lru_cache(None)
     def list_dir(self, relative: str, version: CommittedVersion) -> Sequence[TreeEntry]:
         if self._git_root is None:
             self._git_root = find_vcs_root(self.root)

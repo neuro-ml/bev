@@ -60,16 +60,16 @@ def default_choose(meta: StorageCluster):
     return any(h.match(node) for h in hosts)
 
 
-def _find_root(path, marker):
+def _find_root(path: PathOrStr, marker: str) -> Path:
     path = Path(path).resolve()
     for parent in chain([path], path.parents):
         if (parent / marker).exists():
             return parent
 
 
-def find_repo_root(path: PathOrStr):
+def find_repo_root(path: PathOrStr) -> Path:
     return _find_root(path, CONFIG)
 
 
-def find_vcs_root(path: PathOrStr):
+def find_vcs_root(path: PathOrStr) -> Path:
     return _find_root(path, '.git')

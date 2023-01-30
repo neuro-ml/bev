@@ -1,14 +1,16 @@
 import grp
 import os
 import shutil
+from pathlib import Path
 
+import pytest
 from tarn.config import root_params, load_config as load_storage_config
 from typer.testing import CliRunner
 
 from bev import Repository
 from bev.cli.entrypoint import app
 from bev.config import load_config
-from bev.hash import tree_to_hash
+from bev.hash import tree_to_hash, to_hash
 from bev.testing import create_structure, TempDir
 
 runner = CliRunner()
@@ -50,7 +52,8 @@ def test_fetch_missing(temp_repo, sha256empty):
     assert 'HashNotFound Could not fetch 1 key(s) from remote\n' in result.output
 
 
-def test_pull(temp_repo, chdir):
+@pytest.mark.parametrize('mode', ['copy', 'hash'])
+def test_pull(temp_repo, chdir, mode):
     structure = {
         'file.npy': 'first file content',
         'folder/a.txt': 'nested a content',
@@ -61,11 +64,25 @@ def test_pull(temp_repo, chdir):
         result = runner.invoke(app, ['add', 'file.npy', 'folder'])
         assert result.exit_code == 0
 
-        result = runner.invoke(app, ['pull', 'file.npy.hash', 'folder.hash', '--mode', 'copy'])
-        assert result.exit_code == 0
+        result = runner.invoke(app, ['pull', 'file.npy.hash', 'folder.hash', '--mode', mode])
+        assert result.exit_code == 0, result.output
         for file, content in structure.items():
-            with open(file, 'r') as fd:
-                assert fd.read() == content
+            if mode == 'copy':
+                assert not to_hash(file).exists()
+                with open(file, 'r') as fd:
+                    assert fd.read() == content
+            elif mode == 'hash':
+                assert not Path(file).exists(), list(temp_repo.iterdir())
+                if '/' in file:
+                    assert to_hash(file).exists(), list(temp_repo.iterdir())
+                else:
+                    assert to_hash(file).exists(), list(temp_repo.iterdir())
+                with open(to_hash(file), 'r') as fd:
+                    assert len(fd.read()) == 64
+
+        result = runner.invoke(app, ['add', 'file.npy.hash' if mode == 'hash' else 'file.npy', 'folder'])
+        assert result.exit_code == 0, result.output
+        assert {x.name for x in temp_repo.iterdir()} == {'.bev.yml', 'file.npy.hash', 'folder.hash'}
 
 
 def test_init(tests_root, chdir):

@@ -28,8 +28,7 @@ def add(
         ),
         keep: bool = typer.Option(False, help='Whether to keep the sources after hashing'),
         conflict: Conflict = typer.Option(
-            'error', case_sensitive=False,
-            help='Conflict resolution policy, in case the destination already exists'
+            'error', case_sensitive=False, help=Conflict.__doc__.replace('\n\n', '\n').replace('\n', '\n\n')
         ),
         repository: Path = typer.Option(
             None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
