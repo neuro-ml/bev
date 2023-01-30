@@ -50,7 +50,7 @@ build-backend = "setuptools.build_meta"
 include = ["bev"]
 
 [tool.setuptools.package-data]
-lazycon = [
+bev = [
     "py.typed",
 ]
 
