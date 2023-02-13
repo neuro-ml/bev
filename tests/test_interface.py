@@ -87,6 +87,52 @@ def test_glob(git_repository):
         'new-file.txt',
     ], '**/*.txt')
 
+    # now the same but with nesting
+    repo = Repository(git_repository / 'bev-repo') / 'folder'
+    # all content
+    check('v1', [
+        'file.txt',
+        'nested/a.npy',
+        'nested/b.npy',
+    ])
+    check('v2', [
+        'file.txt',
+        'nested/a.npy',
+        'nested/b.npy',
+        'nested/c.npy',
+    ])
+    check('v3', [
+        'file.txt',
+        'nested/a.npy',
+        'nested/b.npy',
+        'nested/c.npy',
+    ])
+    check('v4', [
+        'file.txt',
+        'nested/a.npy',
+        'nested/b.npy',
+        'nested/c.npy',
+    ])
+    check(Local, [
+        'file.txt',
+        'nested/a.npy',
+        'nested/b.npy',
+        'nested/c.npy',
+    ])
+    # wildcards
+    check('v4', [
+        'nested/',
+    ], '*/')
+    check('v4', [
+        'file.txt',
+    ], '**/*.txt')
+    check(Local, [
+        'nested/',
+    ], '*/')
+    check(Local, [
+        'file.txt',
+    ], '**/*.txt')
+
 
 def test_resolve(git_repository):
     repo = Repository(git_repository / 'bev-repo')
