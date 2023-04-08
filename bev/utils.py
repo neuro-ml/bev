@@ -1,8 +1,8 @@
+import shlex
+import subprocess
 import warnings
 from functools import wraps
 from os import PathLike
-import subprocess
-import shlex
 from typing import Union
 
 from .exceptions import *

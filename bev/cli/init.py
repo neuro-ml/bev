@@ -5,9 +5,9 @@ import yaml
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig
 from tarn.utils import mkdir
 
-from .app import app_command
 from ..config import CONFIG, load_config
 from ..shortcuts import get_consistent_repo_root
+from .app import app_command
 
 
 @app_command

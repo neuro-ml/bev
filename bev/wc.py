@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Optional, AnyStr, Iterator, Tuple, NamedTuple, Sequence
+from typing import AnyStr, Iterator, NamedTuple, Optional, Sequence, Tuple
 
 from wcmatch.glob import Glob
 
 from .exceptions import NameConflict
-from .hash import is_hash, from_hash, to_hash, is_tree, load_key, strip_tree, load_tree
+from .hash import from_hash, is_hash, is_tree, load_key, load_tree, strip_tree, to_hash
 from .vc import VC, TreeEntry
 
 

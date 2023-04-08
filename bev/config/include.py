@@ -1,10 +1,10 @@
 import importlib
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Tuple, Union
 
 from yaml import safe_load
 
-from .registry import register, find, add_type
+from .registry import add_type, find, register
 
 
 @add_type

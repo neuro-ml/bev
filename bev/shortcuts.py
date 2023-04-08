@@ -2,8 +2,8 @@ from pathlib import Path
 from typing import Sequence
 
 from .config import CONFIG, find_repo_root
-from .interface import Repository
 from .exceptions import InconsistentRepositories, RepositoryNotFound
+from .interface import Repository
 from .utils import PathOrStr
 
 

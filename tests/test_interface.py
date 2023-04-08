@@ -136,7 +136,7 @@ def test_glob(git_repository):
 
 def test_resolve(git_repository):
     repo = Repository(git_repository / 'bev-repo')
-    storage = repo.storage.levels[0].locations[0].root
+    storage = repo.storage._local._levels[0].location._locations[0].root
     for local in [
         'just-a-file.txt',
         'images/one.png',
@@ -184,13 +184,13 @@ def test_from_here(temp_repo_factory):
 
 def test_class_defaults(temp_repo):
     repo = Repository(temp_repo, version=Local)
-    create_structure(temp_repo, {'4.png.hash': repo.storage.write(__file__)})
+    create_structure(temp_repo, {'4.png.hash': repo.storage.write(__file__).hex()})
     repo.resolve('4.png')
 
 
 def test_hash_consistency(temp_repo):
     temp_repo = Repository(temp_repo)
-    create_structure(temp_repo.root, {'file.hash': temp_repo.storage.write(__file__)})
+    create_structure(temp_repo.root, {'file.hash': temp_repo.storage.write(__file__).hex()})
 
     # ok
     file = 'file'

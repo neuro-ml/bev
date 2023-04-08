@@ -1,13 +1,13 @@
 from pathlib import Path
-from typing import Dict, Sequence, Any, Union, Optional
+from typing import Any, Dict, Optional, Sequence, Union
 
-from pydantic import validator, root_validator, ValidationError
+from pydantic import ValidationError, root_validator, validator
 from tarn.config import HashConfig
 
 from .hostname import HostName
 from .include import Include
-from .remote import RemoteConfig, NoExtra
 from .registry import find
+from .remote import NoExtra, RemoteConfig
 
 
 class LocationConfig(NoExtra):

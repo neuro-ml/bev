@@ -1,6 +1,6 @@
 import re
 
-from .registry import register, find, add_type
+from .registry import add_type, find, register
 
 
 @add_type

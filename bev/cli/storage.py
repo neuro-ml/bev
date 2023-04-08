@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List
 
 import typer
-from tarn.config import init_storage, StorageConfig
+from tarn.config import StorageConfig, init_storage
 
 from .app import app_command, cli_error
 

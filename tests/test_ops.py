@@ -8,9 +8,9 @@ from bev.testing import create_structure
 
 def test_gather(tmpdir, temp_repo, tests_root, sha256empty):
     storage = Repository(temp_repo).storage
-    hash_a = storage.write(tests_root / 'conftest.py')
-    hash_b = storage.write(tests_root / 'requirements.txt')
-    hash_c = storage.write(tests_root / 'test_ops.py')
+    hash_a = storage.write(tests_root / 'conftest.py').hex()
+    hash_b = storage.write(tests_root / 'requirements.txt').hex()
+    hash_c = storage.write(tests_root / 'test_ops.py').hex()
     entries = {
         'images/one.png': None,
         'images/two.png.hash': hash_a,

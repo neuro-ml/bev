@@ -200,7 +200,7 @@ def test_conflict(temp_repo, chdir, sha256empty):
         return storage.read(load_tree, strip_tree(load_key(path)))
 
     storage = Repository(temp_repo).storage
-    wrong_hash = storage.write(__file__)
+    wrong_hash = storage.write(__file__).hex()
     create_structure(temp_repo, {
         'a': None, 'b.hash': None, 'c.hash/': None,
         # files

@@ -3,19 +3,19 @@ import os
 import shutil
 from collections import OrderedDict
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
 
 import typer
-from tqdm.auto import tqdm
 from rich.progress import track
+from tqdm.auto import tqdm
 
-from .app import app_command
-from .utils import normalize_sources_and_destination
 from ..exceptions import HashError
 from ..hash import is_hash, to_hash
 from ..interface import Repository
-from ..ops import gather, Conflict, save_hash, load_hash
-from ..utils import deprecate, PathOrStr
+from ..ops import Conflict, gather, load_hash, save_hash
+from ..utils import PathOrStr, deprecate
+from .app import app_command
+from .utils import normalize_sources_and_destination
 
 
 @app_command
