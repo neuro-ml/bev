@@ -121,7 +121,7 @@ def save_tree(repo: Repository, tree: dict, destination: Path):  # pragma: no co
     # TODO: storage should allow writing directly from memory
     with open(tree_path, 'w') as file:
         json.dump(tree, file)
-    key = repo.storage.write(tree_path)
+    key = repo.storage.write(tree_path).hex()
     os.remove(tree_path)
 
     with open(destination, 'w') as file:
@@ -133,7 +133,7 @@ def save_tree(repo: Repository, tree: dict, destination: Path):  # pragma: no co
 @deprecate
 def add_file(repo: Repository, source: Path, destination: Optional[Path], keep: bool):  # pragma: no cover
     validate_file(source)
-    key = repo.storage.write(source)
+    key = repo.storage.write(source).hex()
 
     if destination is not None:
         assert is_hash(destination)
