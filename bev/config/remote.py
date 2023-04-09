@@ -3,9 +3,9 @@ from typing import Union
 
 from paramiko.config import SSHConfig
 from pydantic import BaseModel, Extra
-from tarn import SSHLocation, RemoteStorage, HTTPLocation
+from tarn import SCP, Location, Nginx
 
-from .registry import register, add_type
+from .registry import add_type, register
 
 
 class NoExtra(BaseModel):
@@ -19,19 +19,19 @@ class RemoteConfig(NoExtra):
     def from_string(cls, v):
         raise NotImplementedError
 
-    def build(self, root: Union[Path, None], optional: bool) -> Union[RemoteStorage, None]:
+    def build(self, root: Union[Path, None], optional: bool) -> Union[Location, None]:
         raise NotImplementedError
 
 
-@register('ssh')
-class SHHRemote(RemoteConfig):
+@register('scp')
+class SCPRemote(RemoteConfig):
     host: str
 
     @classmethod
     def from_string(cls, v):
         return cls(host=v)
 
-    def build(self, root: Union[Path, None], optional: bool) -> Union[RemoteStorage, None]:
+    def build(self, root: Union[Path, None], optional: bool) -> Union[Location, None]:
         config_path = Path('~/.ssh/config').expanduser()
         if config_path.exists():
             with open(config_path) as f:
@@ -40,16 +40,21 @@ class SHHRemote(RemoteConfig):
 
             # TODO: better way of handling missing hosts
             if ssh_config.lookup(self.host) != {'hostname': self.host} or self.host in ssh_config.get_hostnames():
-                return SSHLocation(self.host, root, optional=optional)
+                return SCP(self.host, root)
 
 
-@register('http')
-class HTTPRemote(RemoteConfig):
+@register('nginx')
+class NginxRemote(RemoteConfig):
     url: str
 
     @classmethod
     def from_string(cls, v):
         return cls(url=v)
 
-    def build(self, root: Union[Path, None], optional: bool) -> Union[RemoteStorage, None]:
-        return HTTPLocation(self.url, optional)
+    def build(self, root: Union[Path, None], optional: bool) -> Union[Location, None]:
+        return Nginx(self.url)
+
+
+# TODO: legacy
+register('ssh', SCPRemote)
+register('http', NginxRemote)

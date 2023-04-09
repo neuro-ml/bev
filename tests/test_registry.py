@@ -1,6 +1,6 @@
 import pytest
 
-from bev.config import register, HTTPRemote, find, RemoteConfig
+from bev.config import register, NginxRemote, find, RemoteConfig
 
 
 def test_invalid():
@@ -9,7 +9,7 @@ def test_invalid():
     with pytest.raises(TypeError, match='match the type'):
         register('ssh', int)
     with pytest.raises(ValueError, match='reserved'):
-        register('ssh', HTTPRemote)
+        register('ssh', NginxRemote)
 
 
 def test_find():

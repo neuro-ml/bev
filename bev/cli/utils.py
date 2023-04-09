@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
 
-from .app import cli_error
 from ..exceptions import HashError
 from ..shortcuts import get_consistent_repo
+from .app import cli_error
 
 
 def normalize_sources(sources):

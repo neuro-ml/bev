@@ -1,13 +1,13 @@
-from typing import List
 from pathlib import Path
+from typing import List
 
 import typer
 from rich.progress import track
 
 from ..exceptions import HashError
+from ..hash import from_hash, is_hash, is_tree, load_key, load_tree, strip_tree, to_hash
 from ..interface import Repository
 from ..shortcuts import get_consistent_repo
-from ..hash import is_hash, to_hash, load_tree, load_key, strip_tree, is_tree, from_hash
 from ..utils import HashNotFound
 from .app import app_command
 
@@ -16,18 +16,15 @@ def _fetch(repo: Repository, path: Path):
     key = load_key(path)
     if is_tree(key):
         key = strip_tree(key)
-        keys = list(set(repo.storage.read(load_tree, key, fetch=True).values()))
+        keys = sorted(set(map(bytes.fromhex, repo.storage.read(load_tree, key, fetch=True).values())))
     else:
-        keys = [key]
+        keys = [bytes.fromhex(key)]
 
     desc = str(from_hash(path))
     if len(desc) > 30:
         desc = desc[:27] + '...'
 
-    missing = set(keys) - set(track(
-        repo.storage.fetch(keys, verbose=False, legacy=False),
-        description=desc, total=len(keys),
-    ))
+    missing = {k for k, success in track(repo.storage.fetch(keys), description=desc, total=len(keys)) if not success}
     if missing:
         raise HashNotFound(f'Could not fetch {len(missing)} key(s) from remote')
 

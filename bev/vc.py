@@ -5,15 +5,10 @@ from abc import abstractmethod
 from contextlib import suppress
 from functools import lru_cache
 from pathlib import Path
-from typing import Union, Sequence, NamedTuple
+from typing import NamedTuple, Sequence, Union
 
 from .config import find_vcs_root
 from .local import LocalVersion
-
-# from dulwich.object_store import tree_lookup_path
-# from dulwich.objects import Commit
-# from dulwich.repo import Repo
-
 
 CommittedVersion = str
 Version = Union[CommittedVersion, LocalVersion]
@@ -102,31 +97,3 @@ class SubprocessGit(VC):
     @staticmethod
     def _call_git(command: str, cwd) -> str:
         return subprocess.check_output(shlex.split(command), cwd=cwd, stderr=subprocess.DEVNULL).decode('utf-8').strip()
-
-# TODO: this interface is not ready yet
-# class Dulwich(VC):
-#     def __init__(self, root: Path):
-#         super().__init__(root)
-#         self._real_repo = None
-#
-#     def read(self, relative: str, version: CommittedVersion):
-#         with suppress(KeyError):
-#             commit: Commit = self._repo.get_object(version.encode())
-#             _, h = tree_lookup_path(self._repo.get_object, commit.tree, self._relative(relative))
-#             return self._repo[h].data.decode().strip()
-#
-#     def get_version(self, relative: str, n: int = 0):
-#         entries = list(self._repo.get_walker(max_entries=n + 1, paths=[self._relative(relative)]))
-#         if len(entries) <= n:
-#             raise FileNotFoundError(relative)
-#         commit: Commit = entries[n].commit
-#         return commit.sha().hexdigest()
-#
-#     def _relative(self, path):
-#         return str((self.root / path).relative_to(self._repo.path)).encode()
-#
-#     @property
-#     def _repo(self):
-#         if self._real_repo is None:
-#             self._real_repo = Repo.discover(self.root)
-#         return self._real_repo

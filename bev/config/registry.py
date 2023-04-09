@@ -1,9 +1,9 @@
-from typing import Type
+from typing import Optional, Type
 
 _REGISTRY = {}
 
 
-def register(name, cls: Type = None):
+def register(name, cls: Optional[Type] = None):
     def decorator(kls: Type):
         if not isinstance(kls, type):
             raise TypeError(f'{kls} is not a type')

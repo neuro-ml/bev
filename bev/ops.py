@@ -1,11 +1,11 @@
 from enum import Enum
 from pathlib import Path
-from typing import Union, Callable, Optional
+from typing import Callable, Optional, Union
 
-from tarn import Storage
+from tarn import HashKeyStorage
 
 from .config import identity
-from .hash import is_hash, load_key, is_tree, load_tree, from_hash, strip_tree, normalize_tree, HashType, tree_to_hash
+from .hash import HashType, from_hash, is_hash, is_tree, load_key, load_tree, normalize_tree, strip_tree, tree_to_hash
 from .interface import Repository
 from .utils import PathOrStr
 
@@ -25,7 +25,7 @@ class Conflict(Enum):
     error = 'error'
 
 
-def gather(source: PathOrStr, storage: Union[Storage, Repository], progressbar: Callable = identity,
+def gather(source: PathOrStr, storage: Union[HashKeyStorage, Repository], progressbar: Callable = identity,
            fetch: Optional[bool] = None) -> HashType:
     source = Path(source)
     if not source.exists():
@@ -58,13 +58,13 @@ def gather(source: PathOrStr, storage: Union[Storage, Repository], progressbar: 
                         gathered[from_hash(relative)] = key
 
                     else:
-                        gathered[relative] = storage.write(child)
+                        gathered[relative] = storage.write(child).hex()
 
             gathered = normalize_tree(gathered, storage.digest_size)
 
         else:
             assert source.is_file()
-            gathered = storage.write(source)
+            gathered = storage.write(source).hex()
 
     return gathered
 
@@ -76,7 +76,7 @@ def load_hash(path: PathOrStr, storage, fetch: bool = False) -> HashType:
     return key
 
 
-def save_hash(tree: HashType, path: PathOrStr, storage: Union[Storage, Repository]):
+def save_hash(tree: HashType, path: PathOrStr, storage: Union[HashKeyStorage, Repository]):
     if isinstance(storage, Repository):
         storage = storage.storage
     if isinstance(tree, dict):

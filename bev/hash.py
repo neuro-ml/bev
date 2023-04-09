@@ -3,12 +3,12 @@ import os
 import tempfile
 from collections import OrderedDict
 from pathlib import Path
-from typing import NamedTuple, Dict, Union
+from typing import Dict, NamedTuple, Union
 
-from tarn import Storage
+from tarn import HashKeyStorage
 
-from .utils import PathOrStr, deprecate
 from .exceptions import HashError
+from .utils import PathOrStr, deprecate
 
 Key = str
 Tree = Dict[PathOrStr, Union[Key, Dict]]
@@ -53,7 +53,7 @@ def strip_tree(key):
     return key
 
 
-def tree_to_hash(tree: Tree, storage: Storage):
+def tree_to_hash(tree: Tree, storage: HashKeyStorage):
     tree = normalize_tree(tree, storage.digest_size)
     # making sure that each time the same string will be saved
     tree = OrderedDict((k, tree[k]) for k in sorted(map(os.fspath, tree)))
@@ -63,7 +63,7 @@ def tree_to_hash(tree: Tree, storage: Storage):
         with open(tree_path, 'w') as file:
             json.dump(tree, file)
 
-        return 'T:' + storage.write(tree_path)
+        return 'T:' + storage.write(tree_path).hex()
 
 
 def normalize_tree(tree: Tree, digest_size: int):
@@ -84,7 +84,7 @@ def normalize_tree(tree: Tree, digest_size: int):
 
             else:
                 # TODO
-                raise ValueError(value)
+                raise TypeError(value)
 
     # TODO: detect absolute paths
     result = {}

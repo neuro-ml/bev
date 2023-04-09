@@ -3,12 +3,12 @@ import socket
 from itertools import chain
 from pathlib import Path
 
-from tarn import StorageLevel
+from tarn import Fanout, Level, Levels
 
-from .base import StorageCluster
-from .hostname import StrHostName
 from ..exceptions import ConfigError
 from ..utils import PathOrStr
+from .base import StorageCluster
+from .hostname import StrHostName
 
 CONFIG = '.bev.yml'
 
@@ -18,13 +18,13 @@ def identity(x):
 
 
 def wrap_levels(levels, cls, order=identity, **kwargs):
-    return tuple(
-        StorageLevel(
-            order([cls(location.root, **kwargs) for location in level.locations]),
+    return Levels(*(
+        Level(
+            Fanout(*order([cls(location.root, **kwargs) for location in level.locations])),
             write=level.write, replicate=level.replicate, name=level.name,
         )
         for level in _filter_levels(levels)
-    )
+    ))
 
 
 def _filter_levels(levels):

@@ -3,19 +3,19 @@ import os
 import shutil
 from collections import OrderedDict
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
 
 import typer
-from tqdm.auto import tqdm
 from rich.progress import track
+from tqdm.auto import tqdm
 
-from .app import app_command
-from .utils import normalize_sources_and_destination
 from ..exceptions import HashError
 from ..hash import is_hash, to_hash
 from ..interface import Repository
-from ..ops import gather, Conflict, save_hash, load_hash
-from ..utils import deprecate, PathOrStr
+from ..ops import Conflict, gather, load_hash, save_hash
+from ..utils import PathOrStr, deprecate
+from .app import app_command
+from .utils import normalize_sources_and_destination
 
 
 @app_command
@@ -121,7 +121,7 @@ def save_tree(repo: Repository, tree: dict, destination: Path):  # pragma: no co
     # TODO: storage should allow writing directly from memory
     with open(tree_path, 'w') as file:
         json.dump(tree, file)
-    key = repo.storage.write(tree_path)
+    key = repo.storage.write(tree_path).hex()
     os.remove(tree_path)
 
     with open(destination, 'w') as file:
@@ -133,7 +133,7 @@ def save_tree(repo: Repository, tree: dict, destination: Path):  # pragma: no co
 @deprecate
 def add_file(repo: Repository, source: Path, destination: Optional[Path], keep: bool):  # pragma: no cover
     validate_file(source)
-    key = repo.storage.write(source)
+    key = repo.storage.write(source).hex()
 
     if destination is not None:
         assert is_hash(destination)

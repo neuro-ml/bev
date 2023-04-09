@@ -4,9 +4,9 @@ from typing import Optional
 
 import typer
 
+from ..ops import Conflict
 from .add import add
 from .app import _app
-from ..ops import Conflict
 
 
 @_app.command(deprecated=True)

@@ -18,7 +18,7 @@ runner = CliRunner()
 
 def test_fetch(temp_repo, chdir):
     storage = Repository(temp_repo).storage
-    file_hash = storage.write(__file__)
+    file_hash = storage.write(__file__).hex()
     create_structure(temp_repo, {
         'a.hash': file_hash,
         'b': None,

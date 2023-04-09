@@ -1,19 +1,19 @@
-from pathlib import Path
-from typing import Sequence, Tuple, Callable, NamedTuple
 import importlib
+from pathlib import Path
+from typing import Callable, NamedTuple, Sequence, Tuple
 
+from tarn import DiskDict, HashKeyStorage, Location
 from yaml import safe_load
-from tarn import Storage, Disk, RemoteStorage
 
-from .base import StorageLevelConfig, RepositoryConfig, ConfigMeta, StorageCluster
-from .utils import CONFIG, identity, _filter_levels, choose_local, default_choose, wrap_levels
 from ..exceptions import ConfigError
+from .base import ConfigMeta, RepositoryConfig, StorageCluster, StorageLevelConfig
+from .utils import CONFIG, _filter_levels, choose_local, default_choose, identity, wrap_levels
 
 
 class CacheStorageIndex(NamedTuple):
     local: Sequence[StorageLevelConfig]
-    remote: Sequence[RemoteStorage]
-    storage: Storage
+    remote: Sequence[Location]
+    storage: HashKeyStorage
 
 
 def load_config(config: Path) -> RepositoryConfig:
@@ -21,23 +21,23 @@ def load_config(config: Path) -> RepositoryConfig:
         return parse(Path(config), safe_load(file))
 
 
-def build_storage(root: Path) -> Tuple[Storage, CacheStorageIndex]:
+def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
     config = load_config(root / CONFIG)
     meta = config.meta
 
-    order_func: Callable[[Sequence[Disk]], Sequence[Disk]] = identity
+    order_func: Callable[[Sequence[Location]], Sequence[Location]] = identity
     if meta.order is not None:
         path, attr = meta.order.rsplit('.', 1)
         order_func = getattr(importlib.import_module(path), attr)
 
-    storage = Storage(
-        *wrap_levels(config.local.storage, Disk, order_func),
+    storage = HashKeyStorage(
+        wrap_levels(config.local.storage, DiskDict, order_func),
         remote=filter_remotes([remote.storage for remote in config.remotes])
     )
     index = None
     if config.local.cache is not None:
-        cache_storage = Storage(
-            *wrap_levels(config.local.cache.storage, Disk, order_func),
+        cache_storage = HashKeyStorage(
+            wrap_levels(config.local.cache.storage, DiskDict, order_func),
             remote=filter_remotes([remote.cache.storage for remote in config.remotes if remote.cache is not None])
         )
         index = CacheStorageIndex(

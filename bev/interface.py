@@ -2,17 +2,17 @@ import inspect
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Sequence, Union, Optional
+from typing import Optional, Sequence, Union
 
-from tarn.digest import digest_file
+from tarn.digest import digest_value
 from wcmatch.glob import GLOBSTAR
 
 from .config import CONFIG, build_storage, find_vcs_root
-from .exceptions import RepositoryNotFound, HashNotFound, InconsistentHash, NameConflict, InconsistentRepositories
-from .hash import is_hash, to_hash, load_tree, strip_tree, Key, load_key, is_tree
+from .exceptions import HashNotFound, InconsistentHash, InconsistentRepositories, NameConflict, RepositoryNotFound
+from .hash import Key, is_hash, is_tree, load_key, load_tree, strip_tree, to_hash
 from .local import Local
 from .utils import PathOrStr
-from .vc import Version, CommittedVersion, VC, SubprocessGit
+from .vc import VC, CommittedVersion, SubprocessGit, Version
 from .wc import BevLocalGlob, BevVCGlob
 
 
@@ -108,7 +108,7 @@ class Repository:
 
         def _resolve(path):
             if check:
-                digest = digest_file(path, self.storage.algorithm)
+                digest = digest_value(path, self.storage.algorithm).hex()
                 if digest != key:
                     raise InconsistentHash(
                         f'The path "{Path(*parts)}" has a wrong hash: expected "{key}", actual "{digest}"'

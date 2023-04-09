@@ -3,17 +3,17 @@ import shutil
 import warnings
 from enum import Enum
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
 
 import typer
 from rich.progress import track
 
-from .add import add
-from .app import cli_error, _app, app_command
-from .utils import normalize_sources, normalize_sources_and_destination
 from ..exceptions import HashError
-from ..hash import is_hash, to_hash, from_hash
-from ..ops import load_hash, Conflict
+from ..hash import from_hash, is_hash, to_hash
+from ..ops import Conflict, load_hash
+from .add import add
+from .app import _app, app_command, cli_error
+from .utils import normalize_sources, normalize_sources_and_destination
 
 
 class PullMode(Enum):

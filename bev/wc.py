@@ -1,10 +1,10 @@
 from pathlib import Path
-from typing import Optional, AnyStr, Iterator, Tuple, NamedTuple
+from typing import AnyStr, Iterator, NamedTuple, Optional, Sequence, Tuple
 
 from wcmatch.glob import Glob
 
 from .exceptions import NameConflict
-from .hash import is_hash, from_hash, to_hash, is_tree, load_key, strip_tree, load_tree
+from .hash import from_hash, is_hash, is_tree, load_key, load_tree, strip_tree, to_hash
 from .vc import VC, TreeEntry
 
 
@@ -44,13 +44,16 @@ class BevGlob(BaseGlob):
         self._storage = storage
         self._fetch = fetch
 
-    def _list_dir(self, relative: Path):
+    def _list_dir(self, relative: Path) -> Sequence[Path]:
+        """ Return the contents of a directory `relative` to `self._repo_root` """
         raise NotImplementedError
 
-    def _exists(self, relative: Path):
+    def _exists(self, relative: Path) -> bool:
+        """ Whether the path `relative` to `self._repo_root` exists """
         raise NotImplementedError
 
     def _read_tree_key(self, relative: Path):
+        """ Read a tree key located `relative` to `self._repo_root` """
         raise NotImplementedError
 
     def _get_cached(self, relative: Path):
@@ -92,7 +95,7 @@ class BevGlob(BaseGlob):
 
     def _scandir(self, curdir: Optional[AnyStr]) -> Iterator[DirEntry]:
         current = Path(self.root_dir)
-        if curdir is not None:
+        if curdir:
             current /= curdir
         relative = current.relative_to(self._repo_root)
 
@@ -146,14 +149,14 @@ class BevLocalGlob(BevGlob):
     def _list_dir(self, relative: Path):
         return [
             TreeEntry(entry.name, entry.is_dir(), entry.is_symlink())
-            for entry in (self.root_dir / relative).iterdir()
+            for entry in (self._repo_root / relative).iterdir()
         ]
 
     def _exists(self, relative: Path):
-        return (self.root_dir / relative).exists()
+        return (self._repo_root / relative).exists()
 
     def _read_tree_key(self, relative: Path):
-        path = self.root_dir / relative
+        path = self._repo_root / relative
         if path.exists():
             return load_key(path)
 
