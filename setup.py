@@ -28,8 +28,7 @@ with open(root / 'bev/__version__.py', encoding='utf-8') as file:
 
 setup(
     name='bev',
-    packages=find_packages(include=('bev',)),
-    include_package_data=True,
+    packages=find_packages(include=('bev*',)),
     version=__version__,
     description='A small manager for versioned data',
     long_description=long_description,
