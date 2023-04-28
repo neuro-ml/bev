@@ -14,15 +14,58 @@ The simplest way is to get it from PyPi:
 pip install bev
 ```
 
-Or if you want to try the latest version from GitHub:
+# Cheatsheet
+
+### Adding new files
 
 ```shell
-git clone https://github.com/neuro-ml/bev.git
-cd bev
-pip install -e .
+ls
+# image.png ids.json some-folder
+bev add image.png
+ls
+# image.png.hash ids.json some-folder
+bev add ids.json some-folder
+ls
+# image.png.hash ids.json.hash some-folder.hash
 
-# or let pip handle the cloning:
-pip install git+https://github.com/neuro-ml/bev.git
+git add image.png.hash ids.json.hash some-folder.hash
+git commit -m "added new files"
+```
+
+### Restoring the hashed files and folders
+
+```shell
+ls
+# image.png.hash ids.json.hash some-folder.hash
+bev pull image.png.hash --mode copy
+ls
+# image.png ids.json.hash some-folder.hash
+bev pull some-folder.hash --mode copy
+ls
+# image.png ids.json.hash some-folder
+```
+
+### Browsing a hashed folder
+
+In this recipe we "expand" the hashed folder and fill it with the hashes of the files it contains.
+This is much faster than copying back the entire folder.
+
+```shell
+ls
+# image.png.hash ids.json.hash some-folder.hash
+bev pull some-folder.hash --mode hash
+ls
+# image.png.hash ids.json.hash some-folder
+ls some-folder
+# photo.jpg.hash some-text-file.txt.hash nested-folder
+```
+
+Afterwards you can add the folder back
+
+```shell
+bev add some-folder
+ls
+# image.png.hash ids.json.hash some-folder.hash
 ```
 
 # Getting started
@@ -46,9 +89,9 @@ bev init
 3. Add files to bev
 
 ```shell
-bev add /path/to/some/file.json .
-bev add /path/to/some/folder/ .
-bev add /path/to/some/image.png .
+bev add /path/to/some/file.json
+# also can provide several paths
+bev add /path/to/some/folder/ /path/to/some/image.png
 ```
 
 4. ... and to git
@@ -67,6 +110,17 @@ from bev import Repository
 # `version` can be a commit hash or a git tag 
 repo = Repository('/path/to/repo', version='8a7fe6')
 image = imageio.imread(repo.resolve('image.png'))
+```
+
+6. Or from cli
+
+```shell
+# replace the folder's hash by the hashes of its files
+bev pull folder.hash --mode hash
+# entirely restore the folder (inverse of `bev add folder`)
+bev pull folder.hash --mode copy
+# same for files
+bev pull image.png.hash --mode copy
 ```
 
 ### Advanced usage
