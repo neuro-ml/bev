@@ -177,6 +177,7 @@ class ConfigMeta(NoExtra):
     order: str = None
     hash: Union[str, HashConfig] = None
     include: Sequence[Include] = ()
+    labels: Optional[Sequence[str]] = None
 
     _override = 'fallback', 'order', 'choose', 'hash'
 

@@ -32,13 +32,15 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
 
     storage = HashKeyStorage(
         wrap_levels(config.local.storage, DiskDict, order_func),
-        remote=filter_remotes([remote.storage for remote in config.remotes])
+        remote=filter_remotes([remote.storage for remote in config.remotes]),
+        labels=meta.labels,
     )
     index = None
     if config.local.cache is not None:
         cache_storage = HashKeyStorage(
             wrap_levels(config.local.cache.storage, DiskDict, order_func),
-            remote=filter_remotes([remote.cache.storage for remote in config.remotes if remote.cache is not None])
+            remote=filter_remotes([remote.cache.storage for remote in config.remotes if remote.cache is not None]),
+            labels=meta.labels,
         )
         index = CacheStorageIndex(
             tuple(_filter_levels(config.local.cache.index)),
