@@ -16,6 +16,9 @@ from .vc import VC, CommittedVersion, SubprocessGit, Version
 from .wc import BevLocalGlob, BevVCGlob
 
 
+_NoArg = object()
+
+
 class Repository:
     """
     Interface that represents a `bev` repository.
@@ -43,6 +46,16 @@ class Repository:
         self.vc: VC = SubprocessGit(self.root)
         self.fetch, self.version, self.check = fetch, version, check
         self._cache = {}
+
+    def copy(self, fetch: bool = _NoArg, version: Optional[Version] = _NoArg, check: bool = _NoArg,
+             prefix: PathOrStr = _NoArg, cache: dict = _NoArg):
+        result = type(self)(
+            self.root, fetch=_resolve_arg(self.fetch, fetch), version=_resolve_arg(self.version, version),
+            check=_resolve_arg(self.check, check),
+        )
+        result.prefix = Path(_resolve_arg(self.prefix, prefix))
+        result._cache = _resolve_arg(self._cache, cache)
+        return result
 
     @classmethod
     def from_here(cls, *relative: PathOrStr, fetch: bool = True, version: Optional[Version] = None,
@@ -205,11 +218,8 @@ class Repository:
         if other.is_absolute():
             raise ValueError('Only relative paths are supported')
 
-        child = Repository(self.root, fetch=self.fetch, version=self.version, check=self.check)
-        # FIXME
-        child.prefix = self.prefix / other
-        child._cache = self._cache
-        return child
+        prefix = self.prefix / other
+        return self.copy(prefix=prefix)
 
     @property
     def path(self):
@@ -289,3 +299,7 @@ class Repository:
         for file in tree:
             result.update(map(str, list(Path(file).parents)[:-1]))
         return result
+
+
+def _resolve_arg(x, y):
+    return x if y is _NoArg else y
