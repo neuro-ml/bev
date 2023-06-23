@@ -1,104 +1,11 @@
-from pathlib import Path
 from typing import Any, Dict, Optional, Sequence, Union
 
-from pydantic import ValidationError, root_validator, validator
+from pydantic import root_validator, validator
 from tarn.config import HashConfig
 
 from .hostname import HostName
 from .include import Include
-from .location import NoExtra, LocationConfig, from_special
-
-
-# from .remote import NoExtra, RemoteConfig
-#
-#
-# class LocationConfig(NoExtra):
-#     root: Path = None
-#     remote: Sequence[RemoteConfig] = ()
-#     optional: bool = False
-#
-#     @root_validator(pre=True)
-#     def from_string(cls, v):
-#         if isinstance(v, str):
-#             return cls(root=v)
-#         return v
-#
-#     @root_validator(pre=True)
-#     def gather_remote(cls, values):
-#         values = values.copy()
-#         remote = list(values.pop('remote', []))
-#         for key in list(values):
-#             if key not in ['root', 'optional']:
-#                 remote.append({key: values.pop(key)})
-#
-#         values['remote'] = tuple(remote)
-#         return values
-#
-#     @validator('remote', pre=True)
-#     def from_single(cls, v):
-#         if isinstance(v, (str, dict, RemoteConfig)):
-#             v = v,
-#
-#         return list(map(cls.parse_entry, v))
-#
-#     @staticmethod
-#     def parse_entry(entry):
-#         if isinstance(entry, RemoteConfig):
-#             return entry
-#
-#         assert isinstance(entry, dict), f'Not a dict: {entry}'
-#         assert len(entry) == 1, entry
-#         (k, entry), = entry.items()
-#         if isinstance(entry, RemoteConfig):
-#             return entry
-#
-#         kls = find(RemoteConfig, k)
-#         if isinstance(entry, str):
-#             return kls.from_string(entry)
-#         return kls.parse_obj(entry)
-#
-#
-# class StorageLevelConfig(NoExtra):
-#     default: Dict[str, Any] = None
-#     locations: Sequence[LocationConfig]
-#     write: bool = True
-#     replicate: bool = True
-#     name: Optional[str] = None
-#
-#     @root_validator(pre=True)
-#     def from_builtins(cls, v):
-#         if isinstance(v, dict):
-#             return v
-#         return cls(locations=v)
-#
-#     @validator('default', pre=True, always=True)
-#     def fill(cls, v):
-#         if v is None:
-#             return {}
-#         return v
-#
-#     @validator('locations', pre=True)
-#     def from_string(cls, v):
-#         if isinstance(v, str):
-#             v = v,
-#         return v
-#
-#     @validator('locations', each_item=True, pre=True)
-#     def add_defaults(cls, v, values):
-#         default = (values['default'] or {}).copy()
-#         if isinstance(v, str):
-#             v = {'root': v}
-#
-#         if default:
-#             assert isinstance(v, dict), type(v)
-#             default.update(v)
-#             return default
-#
-#         return v
-#
-#     @validator('locations')
-#     def to_tuple(cls, v):
-#         return tuple(v)
+from .location import LocationConfig, NoExtra, from_special
 
 
 class StorageConfig(NoExtra):

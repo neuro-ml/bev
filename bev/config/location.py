@@ -1,15 +1,14 @@
+from pathlib import Path
+from typing import Optional, Sequence
+
 import yaml
 from paramiko.config import SSHConfig
-from pathlib import Path
-from pydantic import BaseModel, Extra
-from pydantic import validator
-from typing import Sequence, Optional
-
-from tarn import SCP, Location, Nginx, DiskDict, Fanout, Levels, Level
-from tarn.utils import mkdir
+from pydantic import BaseModel, Extra, validator
+from tarn import SCP, DiskDict, Fanout, Level, Levels, Location, Nginx
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
+from tarn.utils import mkdir
 
-from .registry import add_type, register, find
+from .registry import add_type, find, register
 
 
 class NoExtra(BaseModel):

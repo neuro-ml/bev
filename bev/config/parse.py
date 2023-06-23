@@ -2,12 +2,13 @@ import importlib
 from pathlib import Path
 from typing import Callable, NamedTuple, Sequence, Tuple
 
-from tarn import DiskDict, HashKeyStorage, Location
+from jboc import collect
+from tarn import HashKeyStorage, Location
 from yaml import safe_load
 
 from ..exceptions import ConfigError
 from .base import ConfigMeta, RepositoryConfig, StorageCluster
-from .utils import CONFIG, _filter_levels, choose_local, default_choose, identity, wrap_levels
+from .utils import CONFIG, choose_local, default_choose, identity
 
 
 class CacheStorageIndex(NamedTuple):
@@ -51,15 +52,12 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
     return storage, index
 
 
+@collect
 def filter_remotes(entries):
-    # TODO: collect
-    remotes = []
     for entry in entries:
         entry = entry.remote.build()
         if entry is not None:
-            remotes.append(entry)
-
-    return remotes
+            yield entry
 
 
 def parse(root, config) -> RepositoryConfig:

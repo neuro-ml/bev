@@ -1,5 +1,5 @@
+from .location import LocationConfig, NginxConfig, SCPConfig
 from .registry import register
-from .location import LocationConfig, SCPConfig, NginxConfig
 
 # TODO: legacy
 RemoteConfig = LocationConfig

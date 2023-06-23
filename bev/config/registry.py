@@ -1,3 +1,4 @@
+import importlib
 from typing import Optional, Type
 
 _REGISTRY = {}
@@ -20,12 +21,21 @@ def register(name, cls: Optional[Type] = None):
 
         return kls
 
+    if '.' in name:
+        raise ValueError('Names with dots are reserved for references to modules')
     if cls is None:
         return decorator
     return decorator(cls)
 
 
 def find(kind: Type, name: str):
+    if '.' in name:
+        module, name = name.rsplit('.', 1)
+        module = importlib.import_module(module)
+        value = getattr(module, name)
+        assert isinstance(value, kind), type(value)
+        return value
+
     if kind not in _REGISTRY:
         raise ValueError(f'{kind} not found')
     local = _REGISTRY[kind]
