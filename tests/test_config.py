@@ -1,18 +1,21 @@
+from io import StringIO
 from unittest import mock
 
 import pytest
+from pydantic import ValidationError
 from yaml import safe_load
 
-from bev.config import parse, load_config
-from bev.config.parse import _parse
+from bev.config import parse, load_config, StorageCluster, StorageConfig, CacheConfig
+from bev.config.location import DiskDictConfig, FanoutConfig, LevelsConfig, LevelConfig, NginxConfig, SCPConfig
+from bev.config.parse import _parse, _parse_entry
 from bev.exceptions import ConfigError
 
 
 @pytest.mark.parametrize('name', ['first', 'second', 'third'])
 def test_select_name(name):
     config = {
-        'first': {'storage': [{'root': '1'}]},
-        'second': {'storage': [{'root': '2'}]},
+        'first': {'storage': '1'},
+        'second': {'storage': '2'},
         'meta': {'fallback': 'first'}
     }
     with mock.patch('socket.gethostname', return_value=name):
@@ -24,6 +27,104 @@ def test_select_name(name):
         assert len(config.remotes) == 1
 
 
+# language=yaml
+parameters = (
+    ('''
+c1:
+  storage: '/a/b'
+''', StorageCluster(name='c1', storage=StorageConfig(local=DiskDictConfig(root='/a/b')))), ('''
+c2:
+  storage:
+    local: '/a/b'
+    remote:
+      nginx: 'https://example.com'
+''', StorageCluster(name='c2', storage=StorageConfig(
+        local=DiskDictConfig(root='/a/b'), remote=NginxConfig(url='https://example.com')))), ('''
+c3:
+  storage:
+    local: '/a/b'
+    remote:
+      - nginx: 'https://example.com'
+      - scp: 'some-hostname:/path'
+''', StorageCluster(name='c3', storage=StorageConfig(
+        local=DiskDictConfig(root='/a/b'),
+        remote=FanoutConfig(locations=[
+            NginxConfig(url='https://example.com'), SCPConfig(host='some-hostname', root='/path'),
+        ])))), ('''
+c4:
+  storage:
+    local: 
+      - '/a/b'
+      - '/d/e'
+    remote:
+      - nginx: 'https://example.com'
+      - scp: 'some-hostname:/some/path'
+''', StorageCluster(name='c4', storage=StorageConfig(
+        local=FanoutConfig(locations=[
+            DiskDictConfig(root='/a/b'), DiskDictConfig(root='/d/e'),
+        ]),
+        remote=FanoutConfig(locations=[
+            NginxConfig(url='https://example.com'), SCPConfig(host='some-hostname', root='/some/path'),
+        ])))), ('''
+c5:
+  storage: '/a/b'
+  cache: '/c/d'
+''', StorageCluster(
+        name='c5', storage=StorageConfig(local=DiskDictConfig(root='/a/b')),
+        cache=CacheConfig(
+            index=StorageConfig(local=DiskDictConfig(root='/c/d')),
+            storage=StorageConfig(local=DiskDictConfig(root='/a/b'))
+        ),
+    )), ('''
+c6:
+  storage: '/a/b'
+  cache:
+    index: '/c/d'
+''', StorageCluster(
+        name='c6', storage=StorageConfig(local=DiskDictConfig(root='/a/b')),
+        cache=CacheConfig(
+            index=StorageConfig(local=DiskDictConfig(root='/c/d')),
+            storage=StorageConfig(local=DiskDictConfig(root='/a/b'))
+        ),
+    )), ('''
+c7:
+  storage: '/a/b'
+  cache:
+    index: '/c/d'
+    storage: '/e/f'
+''', StorageCluster(
+        name='c7', storage=StorageConfig(local=DiskDictConfig(root='/a/b')),
+        cache=CacheConfig(
+            index=StorageConfig(local=DiskDictConfig(root='/c/d')),
+            storage=StorageConfig(local=DiskDictConfig(root='/e/f'))
+        ),
+    )), ('''
+c8:
+  storage: 
+    fanout:
+      - '/a/b'
+      - '/c/d'
+''', StorageCluster(name='c8', storage=StorageConfig(
+        local=FanoutConfig(locations=[
+            DiskDictConfig(root='/a/b'), DiskDictConfig(root='/c/d'),
+        ])))), ('''
+c9:
+  storage: 
+    levels:
+      - '/a/b'
+''', StorageCluster(name='c9', storage=StorageConfig(
+        local=LevelsConfig(levels=[
+            LevelConfig(location=DiskDictConfig(root='/a/b'))
+        ])))),
+)
+
+
+@pytest.mark.parametrize('config,expected', parameters)
+def test_storage_parser(config, expected):
+    (name, config), = safe_load(StringIO(config)).items()
+    assert _parse_entry(name, config) == expected
+
+
 def test_parser(configs_root, subtests):
     for file in configs_root.glob('*.yml'):
         with subtests.test(config=file.name):
@@ -33,14 +134,6 @@ def test_parser(configs_root, subtests):
 
 def test_simplified(configs_root):
     assert load_config(configs_root / 'single-full.yml') == load_config(configs_root / 'single-simplified.yml')
-
-
-def test_default(configs_root):
-    config = load_config(configs_root / 'full.yml')
-    default = config.local.default
-    assert default == {'optional': True}
-    for x in config.local.storage:
-        assert x.default == default
 
 
 def test_fallback():
@@ -55,6 +148,15 @@ def test_fallback():
             'b': {'storage': '/'},
             'c': {'storage': '/'},
         })
+
+
+def test_wrong_storage():
+    # it used to raise KeyError
+    with pytest.raises(ValidationError):
+        parse('<string input>', {'a': {
+            'storage': {'root': 'a'},
+            'cache': 'b'
+        }})
 
 
 def test_inheritance(configs_root):

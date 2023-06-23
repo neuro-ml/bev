@@ -5,52 +5,51 @@ one:
     - regex: 'one-.*'
 
   storage:
-    - locations:
-        - root: a
-          optional: true
-        - root: b
-      write: false
-    - locations:
-        - root: c
-        - root: d
-          optional: true
-      replicate: false
+    levels:
+      - location:
+          - diskdict: a
+          - diskdict: b
+        write: false
+      - location:
+          - diskdict: c
+          - diskdict: d
+        replicate: false
 
   cache:
-    - locations:
-        - root: c1
-        - root: c2
-      write: true
-    - locations:
-        - root: c3
-        - root: c4
+    levels:
+      - location:
+          - diskdict: c1
+          - diskdict: c2
+        write: true
+      - location:
+          - diskdict: c3
+          - diskdict: c4
 
 two:
   hostname:
     - regex: '\d+-two'
 
-  default:
-    optional: true
-
   storage:
-    - locations:
-        - root: e
-        - root: f
-      write: true
-    - locations:
-        - root: g
-        - root: h
-        - root: i
-      write: false
+    levels:
+      - location:
+          - diskdict: e
+          - diskdict: f
+        write: true
+      - location:
+          - diskdict: g
+          - diskdict: h
+          - diskdict: i
+        write: false
 
   cache:
-    - locations:
-        - root: c5
-    - locations:
-        - root: c6
-        - root: c7
-        - root: c8
-      replicate: true
+    levels:
+      - location:
+          - diskdict: c5
+      - location:
+          - diskdict: c6
+          - diskdict: c7
+          - diskdict: c8
+        replicate: true
 
 meta:
   fallback: two

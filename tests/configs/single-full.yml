@@ -1,11 +1,10 @@
 one:
   storage:
-    - locations:
-        - root: a
-        - root: b
-        - root: c
-        - root: d
+    fanout:
+      - diskdict: a
+      - diskdict: b
+      - diskdict: c
+      - diskdict: d
 
   cache:
-    - locations:
-        - root: c1
+    diskdict: c1

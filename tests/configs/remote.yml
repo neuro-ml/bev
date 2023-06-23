@@ -1,7 +1,10 @@
 one:
   storage:
-    - root: a
-      http: 'https://example.com'
-    - root: b
-      ssh: 'some-name'
-    - http: 'https://just-an-url'
+    local:
+      - a
+      - b
+
+    remote:
+      - http: 'https://just-an-url'
+      - http: 'https://example.com'
+      - ssh: 'some-name:some/path'
