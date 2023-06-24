@@ -121,6 +121,8 @@ class SCPConfig(LocationConfig):
     def from_special(cls, v):
         # TODO: properly parse ssh link
         if isinstance(v, str):
+            if ':' not in v:
+                raise ValueError('Please provide a path alongside the host in the format "host:path"')
             host, root = v.split(':', 1)
             return cls(host=host, root=root)
 

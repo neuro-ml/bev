@@ -1,14 +1,15 @@
 import importlib
 from pathlib import Path
-from typing import Callable, NamedTuple, Sequence, Tuple
+from typing import Callable, ContextManager, NamedTuple, Sequence, Tuple, Union
 
 from jboc import collect
-from tarn import HashKeyStorage, Location
+from tarn import HashKeyStorage, Location, Writable
 from yaml import safe_load
+from tarn.interface import Key, MaybeLabels, Value
 
 from ..exceptions import ConfigError
 from .base import ConfigMeta, RepositoryConfig, StorageCluster
-from .utils import CONFIG, choose_local, default_choose, identity
+from .utils import CONFIG, choose_local, default_choose
 
 
 class CacheStorageIndex(NamedTuple):
@@ -26,12 +27,6 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
     config = load_config(root / CONFIG)
     meta = config.meta
 
-    # TODO: remove
-    order_func: Callable[[Sequence[Location]], Sequence[Location]] = identity
-    if meta.order is not None:
-        path, attr = meta.order.rsplit('.', 1)
-        order_func = getattr(importlib.import_module(path), attr)
-
     storage = HashKeyStorage(
         config.local.storage.local.build(),
         remote=filter_remotes([remote.storage for remote in config.remotes]),
@@ -45,7 +40,7 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
             labels=meta.labels,
         )
         index = CacheStorageIndex(
-            config.local.cache.index.local.build(),
+            GetItemPatch(config.local.cache.index.local.build()),
             filter_remotes([remote.cache.index for remote in config.remotes if remote.cache is not None]),
             cache_storage,
         )
@@ -55,9 +50,11 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
 @collect
 def filter_remotes(entries):
     for entry in entries:
-        entry = entry.remote.build()
-        if entry is not None:
-            yield entry
+        # TODO: add a test for a None remote
+        if entry.remote is not None:
+            entry = entry.remote.build()
+            if entry is not None:
+                yield entry
 
 
 def parse(root, config) -> RepositoryConfig:
@@ -133,3 +130,31 @@ def _parse(name, config, root):
 
     meta = meta.copy(update=override)
     return meta, entries
+
+
+class GetItemPatch(Writable):
+    def __init__(self, location):
+        self.location = location
+        self.locations = [location]
+
+    def __getattr__(self, attr):
+        return getattr(self.location, attr)
+
+    def __getitem__(self, item):
+        assert item == 0
+        return self
+
+    def read(self, *args, **kwargs):
+        return self.location.read(*args, **kwargs)
+    
+    def read_batch(self, *args, **kwargs):
+        return self.location.read_batch(*args, **kwargs)
+    
+    def write(self, *args, **kwargs):
+        return self.location.write(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        return self.location.delete(*args, **kwargs)
+
+    def contents(self, *args, **kwargs):
+        return self.location.contents(*args, **kwargs)

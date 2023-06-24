@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional, Sequence, Union
+import warnings
 
 from pydantic import root_validator, validator
 from tarn.config import HashConfig
@@ -76,6 +77,11 @@ class ConfigMeta(NoExtra):
     labels: Optional[Sequence[str]] = None
 
     _override = 'fallback', 'order', 'choose', 'hash'
+
+    @validator('order')
+    def deprecate_order(cls, v):
+        if v is not None:
+            warnings.warn('The field "order" is deprecated and has no effect anymore')
 
     @validator('hash', pre=True)
     def normalize_hash(cls, v):
