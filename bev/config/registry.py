@@ -28,7 +28,7 @@ def register(name, cls: Optional[Type] = None):
     return decorator(cls)
 
 
-def find(kind: Type, name: str):
+def find(name: str, kind: Type):
     if '.' in name:
         module, name = name.rsplit('.', 1)
         module = importlib.import_module(module)

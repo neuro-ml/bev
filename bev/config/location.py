@@ -160,7 +160,7 @@ def from_special(x, passthrough: bool = True):
         (name, args), = x.items()
         if isinstance(name, str):
             try:
-                cls = find(LocationConfig, name)
+                cls = find(name, LocationConfig)
             except ValueError:
                 pass
 
