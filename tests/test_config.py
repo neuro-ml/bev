@@ -166,7 +166,7 @@ def test_inheritance(configs_root):
 
     assert set(config) == {'some-name-from-second', 'own-entry', 'child-entry'}
     assert meta.fallback == 'overridden-fallback'
-    assert meta.order == 'base-order'
+    assert meta.order is None
     assert meta.choose is None
 
 
