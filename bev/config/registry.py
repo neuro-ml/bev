@@ -33,7 +33,7 @@ def find(kind: Type, name: str):
         module, name = name.rsplit('.', 1)
         module = importlib.import_module(module)
         value = getattr(module, name)
-        assert isinstance(value, kind), type(value)
+        assert issubclass(value, kind), value
         return value
 
     if kind not in _REGISTRY:
