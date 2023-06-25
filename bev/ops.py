@@ -4,7 +4,7 @@ from typing import Callable, Optional, Union
 
 from tarn import HashKeyStorage
 
-from .config import identity
+from .config.utils import identity
 from .hash import HashType, from_hash, is_hash, is_tree, load_key, load_tree, normalize_tree, strip_tree, tree_to_hash
 from .interface import Repository
 from .utils import PathOrStr

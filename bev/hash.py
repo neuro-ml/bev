@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, NamedTuple, Union
 
 from tarn import HashKeyStorage
+from tarn.utils import value_to_buffer
 
 from .exceptions import HashError
 from .utils import PathOrStr, deprecate
@@ -43,8 +44,8 @@ def load_key(path: PathOrStr):
 
 
 def load_tree(path: Path):
-    with open(path, 'r') as file:
-        return json.load(file)
+    with value_to_buffer(path) as buffer:
+        return json.load(buffer)
 
 
 def strip_tree(key):

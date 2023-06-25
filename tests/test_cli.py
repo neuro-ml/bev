@@ -100,12 +100,12 @@ def test_init(tests_root, chdir):
                 '''
 main:
   storage:
-    - root: '{0}/one'
-    - root: '{0}/two'
-    - root: '{0}/nested/folders'
+    - '{0}/one'
+    - '{0}/two'
+    - '{0}/nested/folders'
 
   cache:
-    - root: '{0}/cache'
+    - '{0}/cache'
 
 meta:
   hash: sha256

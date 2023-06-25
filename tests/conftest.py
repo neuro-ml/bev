@@ -118,7 +118,7 @@ def make_repo(repo, storage):
     # create config
     with open(repo / '.bev.yml', 'w') as file:
         # language=YAML
-        file.write('tests: {storage: [{root: %s}]}' % storage)
+        file.write('tests: {storage: %s}' % storage)
 
     init_storage(StorageConfig(hash='sha256', levels=[1, 31]), storage)
 

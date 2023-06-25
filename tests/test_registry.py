@@ -1,6 +1,6 @@
 import pytest
 
-from bev.config import register, NginxRemote, find, RemoteConfig
+from bev.config import register, NginxConfig, find, LocationConfig
 
 
 def test_invalid():
@@ -9,11 +9,15 @@ def test_invalid():
     with pytest.raises(TypeError, match='match the type'):
         register('ssh', int)
     with pytest.raises(ValueError, match='reserved'):
-        register('ssh', NginxRemote)
+        register('ssh', NginxConfig)
 
 
 def test_find():
     with pytest.raises(ValueError, match='not found'):
-        find(int, 'ssh')
+        find('ssh', int)
     with pytest.raises(ValueError, match='Invalid key'):
-        find(RemoteConfig, 'missing')
+        find('missing', LocationConfig)
+
+
+def test_find_import():
+    assert find('bev.config.location.NginxConfig', LocationConfig) == NginxConfig

@@ -30,7 +30,7 @@ class Include:
         assert len(v) == 1, v
         (k, v), = v.items()
 
-        return find(Include, k)(v, optional)
+        return find(k, Include)(v, optional)
 
 
 @register('file')
