@@ -1,0 +1,11 @@
+one:
+  storage:
+    - locations:
+        - root: a
+        - root: b
+        - root: c
+        - root: d
+
+  cache:
+    - locations:
+        - root: c1

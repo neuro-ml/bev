@@ -1,0 +1,9 @@
+meta:
+  order: 'base-order'
+
+  include:
+    - file: 'second.yml'
+      optional: false
+    - file: 'nested.yml'
+      optional: true
+    - file: 'override.yml'
