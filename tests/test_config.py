@@ -132,6 +132,13 @@ def test_parser(configs_root, subtests):
                 _parse(file, safe_load(fd), file)
 
 
+def test_legacy(configs_root, subtests):
+    for file in configs_root.glob('legacy/*.yml'):
+        with subtests.test(config=file.name):
+            with open(file, 'r') as fd:
+                _parse(file, safe_load(fd), file)
+
+
 def test_simplified(configs_root):
     assert load_config(configs_root / 'single-full.yml') == load_config(configs_root / 'single-simplified.yml')
 
@@ -154,7 +161,7 @@ def test_wrong_storage():
     # it used to raise KeyError
     with pytest.raises(ValidationError):
         parse('<string input>', {'a': {
-            'storage': {'root': 'a'},
+            'storage': {'wrong-key': None},
             'cache': 'b'
         }})
 

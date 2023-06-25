@@ -1,5 +1,5 @@
-from typing import Any, Dict, Optional, Sequence, Union
 import warnings
+from typing import Any, Dict, Optional, Sequence, Union
 
 from pydantic import root_validator, validator
 from tarn.config import HashConfig
@@ -10,11 +10,12 @@ from .location import LocationConfig, NoExtra, from_special
 
 
 class StorageConfig(NoExtra):
-    local: LocationConfig
+    local: Optional[LocationConfig] = None
     remote: Optional[LocationConfig] = None
 
     @root_validator(pre=True)
     def locations(cls, values):
+        assert values, 'at least one entry must be provided'
         if not set(values) <= {'local', 'remote'}:
             return {'local': values}
         return values
@@ -37,7 +38,7 @@ class StorageCluster(NoExtra):
     default: Dict[str, Any] = None
     hostname: Sequence[HostName] = ()
     storage: StorageConfig
-    cache: CacheConfig = None
+    cache: Optional[CacheConfig] = None
 
     @validator('hostname', pre=True)
     def from_single(cls, v):

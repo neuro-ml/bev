@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from typing import Optional, Sequence
 
@@ -122,8 +123,13 @@ class SCPConfig(LocationConfig):
         # TODO: properly parse ssh link
         if isinstance(v, str):
             if ':' not in v:
-                raise ValueError('Please provide a path alongside the host in the format "host:path"')
-            host, root = v.split(':', 1)
+                warnings.warn(
+                    'Please provide a path alongside the host in the format "host:path". '
+                    'This will raise an error in the future.', UserWarning
+                )
+                host, root = v, ''
+            else:
+                host, root = v.split(':', 1)
             return cls(host=host, root=root)
 
     def build(self) -> Optional[Location]:

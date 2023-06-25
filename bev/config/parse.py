@@ -1,14 +1,15 @@
 import importlib
 from pathlib import Path
-from typing import Callable, ContextManager, NamedTuple, Sequence, Tuple, Union
+from typing import Callable, NamedTuple, Sequence, Tuple
 
 from jboc import collect
+from pydantic import ValidationError
 from tarn import HashKeyStorage, Location, Writable
 from yaml import safe_load
-from tarn.interface import Key, MaybeLabels, Value
 
 from ..exceptions import ConfigError
 from .base import ConfigMeta, RepositoryConfig, StorageCluster
+from .legacy import LegacyStorageCluster
 from .utils import CONFIG, choose_local, default_choose
 
 
@@ -87,7 +88,22 @@ def _parse_entry(name, entry):
         raise ConfigError(f'{name}: The key "name" is not available')
     entry = entry.copy()
     entry['name'] = name
-    return StorageCluster(**entry)
+    # TODO: a lot of legacy code that will be removed after a few releases
+    try:
+        return StorageCluster(**entry)
+    except ValidationError as e:
+        exp = e
+    try:
+        cluster = LegacyStorageCluster(**entry)
+    except ValidationError:
+        pass
+    else:
+        kwargs = dict(name=cluster.name, hostname=cluster.hostname, storage=cluster.new_storage())
+        cache = cluster.new_cache()
+        if cache is not None:
+            kwargs['cache'] = cache
+        return StorageCluster(**kwargs)
+    raise exp
 
 
 def _parse(name, config, root):
@@ -146,13 +162,13 @@ class GetItemPatch(Writable):
 
     def read(self, *args, **kwargs):
         return self.location.read(*args, **kwargs)
-    
+
     def read_batch(self, *args, **kwargs):
         return self.location.read_batch(*args, **kwargs)
-    
+
     def write(self, *args, **kwargs):
         return self.location.write(*args, **kwargs)
-    
+
     def delete(self, *args, **kwargs):
         return self.location.delete(*args, **kwargs)
 

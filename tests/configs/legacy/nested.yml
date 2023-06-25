@@ -1,0 +1,7 @@
+own-entry:
+  storage: own
+
+meta:
+  hash: sha256
+  include:
+    - file: 'third.yml'

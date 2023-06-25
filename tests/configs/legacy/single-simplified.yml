@@ -1,0 +1,8 @@
+one:
+  storage:
+    - a
+    - b
+    - c
+    - d
+
+  cache: c1

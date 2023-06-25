@@ -1,9 +1,6 @@
 from pathlib import Path
 
 import typer
-import yaml
-from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig
-from tarn.utils import mkdir
 
 from ..config import CONFIG, load_config
 from ..shortcuts import get_consistent_repo_root
@@ -47,7 +44,7 @@ def init_config(config, permissions, group):
             print(f'The permissions must be between 000 and 777, {oct(permissions)} provided')
             raise typer.Exit(255)
 
-    config.local.storage.local.init(meta, permissions, group)
-    if config.local.cache is not None:
-        config.local.cache.storage.local.init(meta, permissions, group)
-        config.local.cache.index.local.init(meta, permissions, group)
+    local.storage.local.init(meta, permissions, group)
+    if local.cache is not None:
+        local.cache.storage.local.init(meta, permissions, group)
+        local.cache.index.local.init(meta, permissions, group)
