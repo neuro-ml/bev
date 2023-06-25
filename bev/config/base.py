@@ -10,11 +10,12 @@ from .location import LocationConfig, NoExtra, from_special
 
 
 class StorageConfig(NoExtra):
-    local: LocationConfig
+    local: Optional[LocationConfig] = None
     remote: Optional[LocationConfig] = None
 
     @root_validator(pre=True)
     def locations(cls, values):
+        assert values, 'at least one entry must be provided'
         if not set(values) <= {'local', 'remote'}:
             return {'local': values}
         return values
