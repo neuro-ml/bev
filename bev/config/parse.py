@@ -1,17 +1,19 @@
 import importlib
 from pathlib import Path
-from typing import Callable, NamedTuple, Sequence, Tuple
+from typing import Callable, ContextManager, NamedTuple, Sequence, Tuple, Union
 
-from tarn import DiskDict, HashKeyStorage, Location
+from jboc import collect
+from tarn import HashKeyStorage, Location, Writable
 from yaml import safe_load
+from tarn.interface import Key, MaybeLabels, Value
 
 from ..exceptions import ConfigError
-from .base import ConfigMeta, RepositoryConfig, StorageCluster, StorageLevelConfig
-from .utils import CONFIG, _filter_levels, choose_local, default_choose, identity, wrap_levels
+from .base import ConfigMeta, RepositoryConfig, StorageCluster
+from .utils import CONFIG, choose_local, default_choose
 
 
 class CacheStorageIndex(NamedTuple):
-    local: Sequence[StorageLevelConfig]
+    local: Location
     remote: Sequence[Location]
     storage: HashKeyStorage
 
@@ -25,42 +27,34 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
     config = load_config(root / CONFIG)
     meta = config.meta
 
-    order_func: Callable[[Sequence[Location]], Sequence[Location]] = identity
-    if meta.order is not None:
-        path, attr = meta.order.rsplit('.', 1)
-        order_func = getattr(importlib.import_module(path), attr)
-
     storage = HashKeyStorage(
-        wrap_levels(config.local.storage, DiskDict, order_func),
+        config.local.storage.local.build(),
         remote=filter_remotes([remote.storage for remote in config.remotes]),
         labels=meta.labels,
     )
     index = None
     if config.local.cache is not None:
         cache_storage = HashKeyStorage(
-            wrap_levels(config.local.cache.storage, DiskDict, order_func),
+            config.local.cache.storage.local.build(),
             remote=filter_remotes([remote.cache.storage for remote in config.remotes if remote.cache is not None]),
             labels=meta.labels,
         )
         index = CacheStorageIndex(
-            tuple(_filter_levels(config.local.cache.index)),
+            GetItemPatch(config.local.cache.index.local.build()),
             filter_remotes([remote.cache.index for remote in config.remotes if remote.cache is not None]),
             cache_storage,
         )
     return storage, index
 
 
+@collect
 def filter_remotes(entries):
-    remotes = []
     for entry in entries:
-        for level in entry:
-            for location in level.locations:
-                for remote in location.remote:
-                    remote = remote.build(location.root, location.optional)
-                    if remote is not None:
-                        remotes.append(remote)
-
-    return remotes
+        # TODO: add a test for a None remote
+        if entry.remote is not None:
+            entry = entry.remote.build()
+            if entry is not None:
+                yield entry
 
 
 def parse(root, config) -> RepositoryConfig:
@@ -84,6 +78,18 @@ def parse(root, config) -> RepositoryConfig:
     return RepositoryConfig(local=local, remotes=remotes, meta=meta)
 
 
+def _parse_entry(name, entry):
+    if isinstance(entry, str):
+        entry = {'storage': entry}
+    if not isinstance(entry, dict):
+        raise ConfigError(f'{name}: Each config entry must be either a dict or a string')
+    if 'name' in entry:
+        raise ConfigError(f'{name}: The key "name" is not available')
+    entry = entry.copy()
+    entry['name'] = name
+    return StorageCluster(**entry)
+
+
 def _parse(name, config, root):
     if not isinstance(config, dict):
         raise ConfigError(f'{name}: The config must be a dict')
@@ -93,15 +99,7 @@ def _parse(name, config, root):
     # parse own items
     entries = {}
     for name, entry in config.items():
-        if isinstance(entry, str):
-            entry = {'storage': entry}
-        if not isinstance(entry, dict):
-            raise ConfigError(f'{name}: Each config entry must be either a dict or a string')
-        if 'name' in entry:
-            raise ConfigError(f'{name}: The key "name" is not available')
-        entry = entry.copy()
-        entry['name'] = name
-        entries[name] = StorageCluster(**entry)
+        entries[name] = _parse_entry(name, entry)
 
     # parse parents
     override = {}
@@ -132,3 +130,31 @@ def _parse(name, config, root):
 
     meta = meta.copy(update=override)
     return meta, entries
+
+
+class GetItemPatch(Writable):
+    def __init__(self, location):
+        self.location = location
+        self.locations = [location]
+
+    def __getattr__(self, attr):
+        return getattr(self.location, attr)
+
+    def __getitem__(self, item):
+        assert item == 0
+        return self
+
+    def read(self, *args, **kwargs):
+        return self.location.read(*args, **kwargs)
+    
+    def read_batch(self, *args, **kwargs):
+        return self.location.read_batch(*args, **kwargs)
+    
+    def write(self, *args, **kwargs):
+        return self.location.write(*args, **kwargs)
+    
+    def delete(self, *args, **kwargs):
+        return self.location.delete(*args, **kwargs)
+
+    def contents(self, *args, **kwargs):
+        return self.location.contents(*args, **kwargs)

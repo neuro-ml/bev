@@ -3,8 +3,6 @@ import socket
 from itertools import chain
 from pathlib import Path
 
-from tarn import Fanout, Level, Levels
-
 from ..exceptions import ConfigError
 from ..utils import PathOrStr
 from .base import StorageCluster
@@ -15,28 +13,6 @@ CONFIG = '.bev.yml'
 
 def identity(x):
     return x
-
-
-def wrap_levels(levels, cls, order=identity, **kwargs):
-    return Levels(*(
-        Level(
-            Fanout(*order([cls(location.root, **kwargs) for location in level.locations])),
-            write=level.write, replicate=level.replicate, name=level.name,
-        )
-        for level in _filter_levels(levels)
-    ))
-
-
-def _filter_levels(levels):
-    for level in levels:
-        locations = [
-            x for x in level.locations
-            if not x.optional or x.root.exists()
-        ]
-        if locations:
-            level = level.copy()
-            level.locations = locations
-            yield level
 
 
 def choose_local(metas, func, default, root):

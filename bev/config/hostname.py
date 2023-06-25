@@ -26,7 +26,7 @@ class HostName:
         assert len(v) == 1, v
         (k, v), = v.items()
 
-        return find(HostName, k)(v)
+        return find(k, HostName)(v)
 
 
 @register('str')

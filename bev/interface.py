@@ -15,7 +15,6 @@ from .utils import PathOrStr
 from .vc import VC, CommittedVersion, SubprocessGit, Version
 from .wc import BevLocalGlob, BevVCGlob
 
-
 _NoArg = object()
 
 

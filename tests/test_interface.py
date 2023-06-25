@@ -136,7 +136,7 @@ def test_glob(git_repository):
 
 def test_resolve(git_repository):
     repo = Repository(git_repository / 'bev-repo')
-    storage = repo.storage._local._levels[0].location._locations[0].root
+    storage = repo.storage._local.root
     for local in [
         'just-a-file.txt',
         'images/one.png',

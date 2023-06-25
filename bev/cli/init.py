@@ -35,11 +35,6 @@ def init_config(config, permissions, group):
     if meta.hash is None:
         raise ValueError("The config's `meta` must contain a `hash` key")
 
-    levels = list(local.storage)
-    if local.cache is not None:
-        levels.extend(local.cache.index)
-        levels.extend(local.cache.storage)
-
     if permissions is not None:
         if isinstance(permissions, str):
             if not set(permissions) <= set(map(str, range(8))):
@@ -52,13 +47,7 @@ def init_config(config, permissions, group):
             print(f'The permissions must be between 000 and 777, {oct(permissions)} provided')
             raise typer.Exit(255)
 
-    for level in levels:
-        for location in level.locations:
-            storage_root = location.root
-            if not storage_root.exists():
-                mkdir(storage_root, permissions, group, parents=True)
-
-            conf_path = storage_root / STORAGE_CONFIG_NAME
-            if not conf_path.exists():
-                with open(conf_path, 'w') as file:
-                    yaml.safe_dump(StorageConfig(hash=meta.hash).dict(exclude_defaults=True), file)
+    config.local.storage.local.init(meta, permissions, group)
+    if config.local.cache is not None:
+        config.local.cache.storage.local.init(meta, permissions, group)
+        config.local.cache.index.local.init(meta, permissions, group)
