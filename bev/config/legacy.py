@@ -3,8 +3,10 @@ from typing import Any, Dict, Optional, Sequence
 
 from pydantic import ValidationError, root_validator, validator
 
-from . import StorageConfig, find
+
+from .base import StorageConfig, CacheConfig
 from .hostname import HostName
+from .registry import find
 from .location import LocationConfig, NoExtra
 
 
@@ -97,7 +99,7 @@ class StorageLevelConfig(NoExtra):
         return tuple(v)
 
 
-class CacheConfig(NoExtra):
+class LegacyCacheConfig(NoExtra):
     index: Sequence[StorageLevelConfig]
     storage: Sequence[StorageLevelConfig]
     default: Dict[str, Any] = None
@@ -108,21 +110,38 @@ class LegacyStorageCluster(NoExtra):
     default: Dict[str, Any] = None
     hostname: Sequence[HostName] = ()
     storage: Sequence[StorageLevelConfig]
-    cache: CacheConfig = None
+    cache: LegacyCacheConfig = None
 
-    def new_storage(self):
+    def _new(self, old):
         levels = []
-        for level in self.storage:
+        for level in old:
             fanout = []
             for entry in level.locations:
                 if entry.root is not None:
                     fanout.append({'diskdict': str(entry.root)})
 
             if fanout:
-                levels.append({'fanout': fanout})
+                if len(fanout) == 1:
+                    levels.append(fanout[0])
+                else:
+                    levels.append({'fanout': fanout})
 
-        return StorageConfig(local={'levels': levels})
+        if len(levels) > 1:
+            local = {'levels': levels}
+        else:
+            local = levels[0]
+        return StorageConfig(local=local)
 
+    def new_storage(self):
+        return self._new(self.storage)
+    
+    def new_cache(self):
+        if self.cache is not None:
+            index = self._new(self.cache.index)
+            print(self.cache, self.cache.index, index, self._new(self.cache.storage))
+            if index is not None:
+                return {'index': index, 'storage': self._new(self.cache.storage)}
+    
     @validator('hostname', pre=True)
     def from_single(cls, v):
         if isinstance(v, (str, dict, HostName)):
@@ -143,13 +162,13 @@ class LegacyStorageCluster(NoExtra):
             default.update(v.pop('default', {}))
             storage = cls._parse_storage_levels(v.pop('storage', values['storage']), default)
             index = cls._parse_storage_levels(v.pop('index'), default)
-            return CacheConfig(**v, index=index, default=default, storage=storage)
+            return LegacyCacheConfig(**v, index=index, default=default, storage=storage)
 
         index = cls._parse_storage_levels(v, default)
         if 'storage' not in values:
             raise ValueError('No valid storage config found')
         storage = cls._parse_storage_levels(values['storage'], default)
-        return CacheConfig(index=index, storage=storage, default=default)
+        return LegacyCacheConfig(index=index, storage=storage, default=default)
 
     @staticmethod
     def _parse_storage_levels(v, default):

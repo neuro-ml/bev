@@ -88,6 +88,7 @@ def _parse_entry(name, entry):
         raise ConfigError(f'{name}: The key "name" is not available')
     entry = entry.copy()
     entry['name'] = name
+    # TODO: a lot of legacy code that will be removed after a few releases
     try:
         return StorageCluster(**entry)
     except ValidationError as e:
@@ -97,7 +98,11 @@ def _parse_entry(name, entry):
     except ValidationError:
         pass
     else:
-        return StorageCluster(name=cluster.name, hostname=cluster.hostname, storage=cluster.new_storage())
+        kwargs = dict(name=cluster.name, hostname=cluster.hostname, storage=cluster.new_storage())
+        cache = cluster.new_cache()
+        if cache is not None:
+            kwargs['cache'] = cache
+        return StorageCluster(**kwargs)
     raise exp
 
 

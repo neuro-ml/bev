@@ -38,7 +38,7 @@ class StorageCluster(NoExtra):
     default: Dict[str, Any] = None
     hostname: Sequence[HostName] = ()
     storage: StorageConfig
-    cache: CacheConfig = None
+    cache: Optional[CacheConfig] = None
 
     @validator('hostname', pre=True)
     def from_single(cls, v):
