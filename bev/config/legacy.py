@@ -1,13 +1,11 @@
 from pathlib import Path
+from pydantic import ValidationError, root_validator, validator
 from typing import Any, Dict, Optional, Sequence
 
-from pydantic import ValidationError, root_validator, validator
-
-
-from .base import StorageConfig, CacheConfig
+from .base import StorageConfig
 from .hostname import HostName
-from .registry import find
 from .location import LocationConfig, NoExtra
+from .registry import find
 
 
 class LegacyLocationConfig(NoExtra):
@@ -134,14 +132,14 @@ class LegacyStorageCluster(NoExtra):
 
     def new_storage(self):
         return self._new(self.storage)
-    
+
     def new_cache(self):
         if self.cache is not None:
             index = self._new(self.cache.index)
             print(self.cache, self.cache.index, index, self._new(self.cache.storage))
             if index is not None:
                 return {'index': index, 'storage': self._new(self.cache.storage)}
-    
+
     @validator('hostname', pre=True)
     def from_single(cls, v):
         if isinstance(v, (str, dict, HostName)):
