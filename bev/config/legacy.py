@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, Sequence
 from .base import StorageConfig
 from .hostname import HostName
 from .location import LocationConfig, NoExtra
-from .registry import find
+from .registry import RegistryError, find
 
 
 class LegacyLocationConfig(NoExtra):
@@ -48,7 +48,10 @@ class LegacyLocationConfig(NoExtra):
         if isinstance(entry, LocationConfig):
             return entry
 
-        kls = find(k, LocationConfig)
+        try:
+            kls = find(k, LocationConfig)
+        except RegistryError as e:
+            raise ValueError(str(e)) from e
         if isinstance(entry, str):
             return kls.from_special(entry)
         return kls.parse_obj(entry)
@@ -158,6 +161,8 @@ class LegacyStorageCluster(NoExtra):
         if isinstance(v, dict) and 'index' in v:
             v = v.copy()
             default.update(v.pop('default', {}))
+            if 'storage' not in values:
+                raise ValueError('No valid storage config found')
             storage = cls._parse_storage_levels(v.pop('storage', values['storage']), default)
             index = cls._parse_storage_levels(v.pop('index'), default)
             return LegacyCacheConfig(**v, index=index, default=default, storage=storage)

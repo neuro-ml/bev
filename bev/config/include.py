@@ -4,7 +4,7 @@ from typing import Tuple, Union
 
 from yaml import safe_load
 
-from .registry import add_type, find, register
+from .registry import RegistryError, add_type, find, register
 
 
 @add_type
@@ -30,7 +30,10 @@ class Include:
         assert len(v) == 1, v
         (k, v), = v.items()
 
-        return find(k, Include)(v, optional)
+        try:
+            return find(k, Include)(v, optional)
+        except RegistryError as e:
+            raise ValueError(str(e)) from e
 
 
 @register('file')

@@ -4,6 +4,10 @@ from typing import Optional, Type
 _REGISTRY = {}
 
 
+class RegistryError(Exception):
+    pass
+
+
 def register(name, cls: Optional[Type] = None):
     def decorator(kls: Type):
         if not isinstance(kls, type):
@@ -37,10 +41,10 @@ def find(name: str, kind: Type):
         return value
 
     if kind not in _REGISTRY:
-        raise ValueError(f'{kind} not found')
+        raise RegistryError(f'{kind} not found')
     local = _REGISTRY[kind]
     if name not in local:
-        raise ValueError(f'Invalid key "{name}" for "{kind.__name__}"')
+        raise RegistryError(f'Invalid key "{name}" for "{kind.__name__}"')
 
     return local[name]
 
