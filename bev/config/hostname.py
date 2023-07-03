@@ -1,6 +1,6 @@
 import re
 
-from .registry import add_type, find, register
+from .registry import RegistryError, add_type, find, register
 
 
 @add_type
@@ -26,7 +26,10 @@ class HostName:
         assert len(v) == 1, v
         (k, v), = v.items()
 
-        return find(k, HostName)(v)
+        try:
+            return find(k, HostName)(v)
+        except RegistryError as e:
+            raise ValueError(str(e)) from e
 
 
 @register('str')

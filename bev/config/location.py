@@ -9,7 +9,7 @@ from tarn import SCP, DiskDict, Fanout, Level, Levels, Location, Nginx
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
 from tarn.utils import mkdir
 
-from .registry import add_type, find, register
+from .registry import RegistryError, add_type, find, register
 
 
 class NoExtra(BaseModel):
@@ -167,7 +167,7 @@ def from_special(x, passthrough: bool = True):
         if isinstance(name, str):
             try:
                 cls = find(name, LocationConfig)
-            except ValueError:
+            except RegistryError:
                 pass
 
             else:
