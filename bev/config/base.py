@@ -1,9 +1,9 @@
 import warnings
 from typing import Any, Dict, Optional, Sequence, Union
 
-from pydantic import root_validator, validator
 from tarn.config import HashConfig
 
+from .compat import field_validator, model_validator
 from .hostname import HostName
 from .include import Include
 from .location import LocationConfig, NoExtra, from_special
@@ -13,19 +13,19 @@ class StorageConfig(NoExtra):
     local: Optional[LocationConfig] = None
     remote: Optional[LocationConfig] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def locations(cls, values):
         assert values, 'at least one entry must be provided'
         if not set(values) <= {'local', 'remote'}:
-            return {'local': values}
-        return values
+            values = {'local': values}
+        return {k: from_special(v) for k, v in values.items()}
 
 
 class CacheConfig(NoExtra):
     index: StorageConfig
     storage: StorageConfig
 
-    @validator('index', 'storage', pre=True)
+    @field_validator('index', 'storage', mode='before')
     def validate_storage(cls, v):
         res = from_special(v, False)
         if res is not None:
@@ -40,20 +40,20 @@ class StorageCluster(NoExtra):
     storage: StorageConfig
     cache: Optional[CacheConfig] = None
 
-    @validator('hostname', pre=True)
+    @field_validator('hostname', mode='before')
     def from_single(cls, v):
         if isinstance(v, (str, dict, HostName)):
             v = v,
         return v
 
-    @validator('storage', pre=True)
+    @field_validator('storage', mode='before')
     def validate_storage(cls, v):
         res = from_special(v, False)
         if res is not None:
             return StorageConfig(local=res)
         return v
 
-    @validator('cache', pre=True)
+    @field_validator('cache', mode='before')
     def validate_cache(cls, v, values):
         if isinstance(v, CacheConfig):
             return v
@@ -61,6 +61,9 @@ class StorageCluster(NoExtra):
             v = {'index': v}
 
         if 'storage' not in v:
+            # FIXME
+            if not isinstance(values, dict):
+                values = values.data
             if 'storage' not in values:
                 raise ValueError('No valid `storage` configuration found')
             v = v.copy()
@@ -77,20 +80,18 @@ class ConfigMeta(NoExtra):
     include: Sequence[Include] = ()
     labels: Optional[Sequence[str]] = None
 
-    _override = 'fallback', 'order', 'choose', 'hash'
-
-    @validator('order')
+    @field_validator('order')
     def deprecate_order(cls, v):
         if v is not None:
             warnings.warn('The field "order" is deprecated and has no effect anymore')
 
-    @validator('hash', pre=True)
+    @field_validator('hash', mode='before')
     def normalize_hash(cls, v):
         if isinstance(v, str):
             v = {'name': v}
         return v
 
-    @validator('include', pre=True)
+    @field_validator('include', mode='before')
     def from_single(cls, v):
         if isinstance(v, (dict, Include)):
             v = v,

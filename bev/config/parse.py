@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from tarn import HashKeyStorage, Location, Writable
 from yaml import safe_load
 
+from .compat import model_validate, model_copy
 from ..exceptions import ConfigError
 from .base import ConfigMeta, RepositoryConfig, StorageCluster
 from .legacy import LegacyStorageCluster
@@ -92,7 +93,7 @@ def _parse_entry(name, entry):
     try:
         return StorageCluster(**entry)
     except ValidationError as e:
-        exp = e
+        exc = e
     try:
         cluster = LegacyStorageCluster(**entry)
     except ValidationError:
@@ -103,7 +104,7 @@ def _parse_entry(name, entry):
         if cache is not None:
             kwargs['cache'] = cache
         return StorageCluster(**kwargs)
-    raise exp
+    raise exc
 
 
 def _parse(name, config, root):
@@ -111,7 +112,7 @@ def _parse(name, config, root):
         raise ConfigError(f'{name}: The config must be a dict')
 
     config = config.copy()
-    meta = ConfigMeta.parse_obj(config.pop('meta', {}))
+    meta = model_validate(ConfigMeta, config.pop('meta', {}))
     # parse own items
     entries = {}
     for name, entry in config.items():
@@ -132,10 +133,10 @@ def _parse(name, config, root):
             raise ConfigError(f'{name}: Trying to override the names {common} from parent config {parent.value}')
 
         override.update({
-            k: getattr(parent_meta, k) for k in ConfigMeta._override if getattr(meta, k) is None
+            k: getattr(parent_meta, k) for k in ('fallback', 'order', 'choose', 'hash') if getattr(meta, k) is None
         })
         if meta.hash is None:
-            meta = meta.copy(update=dict(hash=parent_meta.hash))
+            meta = model_copy(meta, update=dict(hash=parent_meta.hash))
         elif parent_meta.hash is not None and meta.hash != parent_meta.hash:
             raise ConfigError(
                 f'{name}: The parent config ({parent.value}) has a different hash spec: '
@@ -144,7 +145,7 @@ def _parse(name, config, root):
 
         entries.update(items)
 
-    meta = meta.copy(update=override)
+    meta = model_copy(meta, update=override)
     return meta, entries
 
 

@@ -4,6 +4,7 @@ from typing import Tuple, Union
 
 from yaml import safe_load
 
+from .compat import core_schema
 from .registry import RegistryError, add_type, find, register
 
 
@@ -18,10 +19,14 @@ class Include:
 
     @classmethod
     def __get_validators__(cls):
-        yield cls.validate
+        yield cls._validate
 
     @classmethod
-    def validate(cls, v):
+    def __get_pydantic_core_schema__(cls, _source_type, _handler):
+        return core_schema.no_info_plain_validator_function(cls._validate)
+
+    @classmethod
+    def _validate(cls, v):
         if isinstance(v, Include):
             return v
 
