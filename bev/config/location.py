@@ -22,14 +22,8 @@ class LocationConfig(NoExtra):
 
     @classmethod
     def __get_pydantic_core_schema__(cls, _source_type, _handler):
-        def val(v):
-            if cls is LocationConfig:
-                return from_special(v)
-            return v
-
         return core_schema.no_info_before_validator_function(
-            val,
-            # lambda v: ,
+            lambda v: from_special(v) if cls is LocationConfig else v,
             _handler(_source_type),
         )
 
