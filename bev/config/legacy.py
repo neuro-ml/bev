@@ -1,11 +1,14 @@
 from pathlib import Path
-from pydantic import ValidationError, root_validator, validator
+
+from jboc import collect
+from pydantic import ValidationError
 from typing import Any, Dict, Optional, Sequence
 
 from .base import StorageConfig
+from .compat import model_validator, field_validator
 from .hostname import HostName
 from .location import LocationConfig, NoExtra
-from .registry import find
+from .registry import RegistryError, find
 
 
 class LegacyLocationConfig(NoExtra):
@@ -13,15 +16,17 @@ class LegacyLocationConfig(NoExtra):
     remote: Sequence[LocationConfig] = ()
     optional: bool = False
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def from_string(cls, v):
         if isinstance(v, str):
             return cls(root=v)
         return v
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def gather_remote(cls, values):
-        values = values.copy()
+        if isinstance(values, StorageLevelConfig):
+            return values
+        values = to_values(values).copy()
         remote = list(values.pop('remote', []))
         for key in list(values):
             if key not in ['root', 'optional']:
@@ -30,7 +35,7 @@ class LegacyLocationConfig(NoExtra):
         values['remote'] = tuple(remote)
         return values
 
-    @validator('remote', pre=True)
+    @field_validator('remote', mode='before')
     def from_single(cls, v):
         if isinstance(v, (str, dict, LocationConfig)):
             v = v,
@@ -48,7 +53,10 @@ class LegacyLocationConfig(NoExtra):
         if isinstance(entry, LocationConfig):
             return entry
 
-        kls = find(k, LocationConfig)
+        try:
+            kls = find(k, LocationConfig)
+        except RegistryError as e:
+            raise ValueError(str(e)) from e
         if isinstance(entry, str):
             return kls.from_special(entry)
         return kls.parse_obj(entry)
@@ -61,38 +69,38 @@ class StorageLevelConfig(NoExtra):
     replicate: bool = True
     name: Optional[str] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode='before')
     def from_builtins(cls, v):
         if isinstance(v, dict):
             return v
         return cls(locations=v)
 
-    @validator('default', pre=True, always=True)
+    @field_validator('default', mode='before', always=True)
     def fill(cls, v):
         if v is None:
             return {}
         return v
 
-    @validator('locations', pre=True)
-    def from_string(cls, v):
-        if not isinstance(v, (list, tuple)):
-            v = v,
-        return v
+    @field_validator('locations', mode='before')
+    @collect
+    def add_defaults(cls, vs, values):
+        if not isinstance(vs, (list, tuple)):
+            vs = vs,
+        values = to_values(values)
+        for v in vs:
+            default = (values['default'] or {}).copy()
+            if isinstance(v, str):
+                v = {'root': v}
 
-    @validator('locations', each_item=True, pre=True)
-    def add_defaults(cls, v, values):
-        default = (values['default'] or {}).copy()
-        if isinstance(v, str):
-            v = {'root': v}
+            if default:
+                assert isinstance(v, dict), type(v)
+                default.update(v)
+                yield default
 
-        if default:
-            assert isinstance(v, dict), type(v)
-            default.update(v)
-            return default
+            else:
+                yield v
 
-        return v
-
-    @validator('locations')
+    @field_validator('locations')
     def to_tuple(cls, v):
         return tuple(v)
 
@@ -140,24 +148,28 @@ class LegacyStorageCluster(NoExtra):
             if index is not None:
                 return {'index': index, 'storage': self._new(self.cache.storage)}
 
-    @validator('hostname', pre=True)
+    @field_validator('hostname', mode='before')
     def from_single(cls, v):
         if isinstance(v, (str, dict, HostName)):
             v = v,
         return v
 
-    @validator('storage', pre=True)
+    @field_validator('storage', mode='before')
     def validate_storage(cls, v, values):
+        values = to_values(values)
         default = (values['default'] or {}).copy()
         return cls._parse_storage_levels(v, default)
 
-    @validator('cache', pre=True)
+    @field_validator('cache', mode='before')
     def validate_cache(cls, v, values):
+        values = to_values(values)
         default = (values['default'] or {}).copy()
 
         if isinstance(v, dict) and 'index' in v:
             v = v.copy()
             default.update(v.pop('default', {}))
+            if 'storage' not in values:
+                raise ValueError('No valid storage config found')
             storage = cls._parse_storage_levels(v.pop('storage', values['storage']), default)
             index = cls._parse_storage_levels(v.pop('index'), default)
             return LegacyCacheConfig(**v, index=index, default=default, storage=storage)
@@ -199,3 +211,7 @@ class LegacyStorageCluster(NoExtra):
             result.append(entry)
 
         return tuple(result)
+
+
+def to_values(x):
+    return x if isinstance(x, dict) else x.data

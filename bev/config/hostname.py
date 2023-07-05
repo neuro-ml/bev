@@ -1,6 +1,7 @@
 import re
 
-from .registry import add_type, find, register
+from .compat import core_schema
+from .registry import RegistryError, add_type, find, register
 
 
 @add_type
@@ -13,10 +14,14 @@ class HostName:
 
     @classmethod
     def __get_validators__(cls):
-        yield cls.validate
+        yield cls._validate
 
     @classmethod
-    def validate(cls, v):
+    def __get_pydantic_core_schema__(cls, _source_type, _handler):
+        return core_schema.no_info_plain_validator_function(cls._validate)
+
+    @classmethod
+    def _validate(cls, v):
         if isinstance(v, HostName):
             return v
         if isinstance(v, str):
@@ -26,7 +31,10 @@ class HostName:
         assert len(v) == 1, v
         (k, v), = v.items()
 
-        return find(k, HostName)(v)
+        try:
+            return find(k, HostName)(v)
+        except RegistryError as e:
+            raise ValueError(str(e)) from e
 
 
 @register('str')

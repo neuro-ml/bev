@@ -45,16 +45,24 @@ jobs:
           sed -i -e "s|$MODULE_PARENT/||g" reports/coverage-${{ matrix.python-version }}.xml
           sed -i -e "s|$(echo $MODULE_PARENT/ | tr "/" .)||g" reports/coverage-${{ matrix.python-version }}.xml
 
+      - name: Test with pydantic v1
+        run: |
+          pip install --upgrade "pydantic<2.0.0"
+          pytest tests --junitxml=reports/junit-${{ matrix.python-version }}-pydantic1.xml --cov="$MODULE_PARENT/$MODULE_NAME" --cov-report=xml --cov-branch
+          coverage xml -o reports/coverage-${{ matrix.python-version }}-pydantic1.xml
+          sed -i -e "s|$MODULE_PARENT/||g" reports/coverage-${{ matrix.python-version }}-pydantic1.xml
+          sed -i -e "s|$(echo $MODULE_PARENT/ | tr "/" .)||g" reports/coverage-${{ matrix.python-version }}-pydantic1.xml
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: reports-${{ matrix.python-version }}
-          path: reports/*-${{ matrix.python-version }}.xml
+          path: reports/*.xml
         if: ${{ always() }}
 
       - name: Upload coverage results
         uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
-          files: reports/coverage-${{ matrix.python-version }}.xml
+          files: reports/coverage-*.xml
           verbose: true

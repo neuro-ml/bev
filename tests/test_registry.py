@@ -1,6 +1,6 @@
 import pytest
 
-from bev.config import register, NginxConfig, find, LocationConfig
+from bev.config import register, NginxConfig, find, LocationConfig, RegistryError
 
 
 def test_invalid():
@@ -13,9 +13,9 @@ def test_invalid():
 
 
 def test_find():
-    with pytest.raises(ValueError, match='not found'):
+    with pytest.raises(RegistryError, match='not found'):
         find('ssh', int)
-    with pytest.raises(ValueError, match='Invalid key'):
+    with pytest.raises(RegistryError, match='Invalid key'):
         find('missing', LocationConfig)
 
 

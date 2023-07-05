@@ -1,8 +1,11 @@
+import cloudpickle
 import os
 import shutil
 from pathlib import Path
 
 import pytest
+import tarn.pickler
+from tarn.pickler.interface import PickleError
 
 from bev import Local, Repository
 from bev.exceptions import InconsistentHash, HashNotFound
@@ -219,3 +222,9 @@ def is_relative_to(this, *other):
         return True
     except ValueError:
         return False
+
+
+def test_pickleable_local():
+    assert cloudpickle.loads(cloudpickle.dumps(Local)) == Local
+    with pytest.raises(PickleError):
+        tarn.pickler.dumps(Local)

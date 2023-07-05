@@ -3,18 +3,14 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 import yaml
+from jboc import collect
 from paramiko.config import SSHConfig
-from pydantic import BaseModel, Extra, validator
 from tarn import SCP, DiskDict, Fanout, Level, Levels, Location, Nginx
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
 from tarn.utils import mkdir
 
-from .registry import add_type, find, register
-
-
-class NoExtra(BaseModel):
-    class Config:
-        extra = Extra.forbid
+from .compat import field_validator, NoExtra, core_schema, model_validate, model_dump
+from .registry import RegistryError, add_type, find, register
 
 
 @add_type
@@ -23,6 +19,13 @@ class LocationConfig(NoExtra):
     def __get_validators__(cls):
         yield lambda v: from_special(v)
         yield from super().__get_validators__()
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, _source_type, _handler):
+        return core_schema.no_info_before_validator_function(
+            lambda v: from_special(v) if cls is LocationConfig else v,
+            _handler(_source_type),
+        )
 
     @classmethod
     def from_special(cls, v):
@@ -55,7 +58,7 @@ class DiskDictConfig(LocationConfig):
             conf_path = self.root / STORAGE_CONFIG_NAME
             if not conf_path.exists():
                 with open(conf_path, 'w') as file:
-                    yaml.safe_dump(TarnStorageConfig(hash=meta.hash).dict(exclude_defaults=True), file)
+                    yaml.safe_dump(model_dump(TarnStorageConfig(hash=meta.hash), exclude_defaults=True), file)
 
 
 @register('fanout')
@@ -87,11 +90,15 @@ class LevelConfig(NoExtra):
 class LevelsConfig(LocationConfig):
     levels: Sequence[LevelConfig]
 
-    @validator('levels', pre=True, each_item=True)
-    def _from_location(cls, v):
-        if (isinstance(v, dict) and set(v) <= {'location', 'write', 'replicate'}) or isinstance(v, LevelConfig):
-            return v
-        return {'location': v}
+    # TODO: https://docs.pydantic.dev/latest/usage/validators/#generic-validated-collections
+    @field_validator('levels', mode='before')
+    @collect
+    def _from_location(cls, vs):
+        for v in vs:
+            if (isinstance(v, dict) and set(v) <= {'location', 'write', 'replicate'}) or isinstance(v, LevelConfig):
+                yield v
+            else:
+                yield {'location': v}
 
     @classmethod
     def from_special(cls, v):
@@ -167,7 +174,7 @@ def from_special(x, passthrough: bool = True):
         if isinstance(name, str):
             try:
                 cls = find(name, LocationConfig)
-            except ValueError:
+            except RegistryError:
                 pass
 
             else:
@@ -176,7 +183,7 @@ def from_special(x, passthrough: bool = True):
                     if result is None:
                         raise ValueError(f'Unsupported type {type(args).__name__!r}')
                     return result
-                return cls.parse_obj(args)
+                return model_validate(cls, args)
 
     if passthrough:
         return x
