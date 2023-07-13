@@ -3,20 +3,14 @@ name = 'bev'
 dynamic = ['version', 'dependencies']
 description = 'A small manager for versioned data'
 readme = 'README.md'
-requires-python = '>=3.6'
+requires-python = '>=3.10'
 license = { file = 'LICENSE' }
 keywords = ['data', 'version control']
-authors = [
-    { name = 'NeuroML Group', email = 'maxs987@gmail.com' }
-]
+authors = [{ name = 'NeuroML Group', email = 'maxs987@gmail.com' }]
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'License :: OSI Approved :: Apache Software License',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.6',
-    'Programming Language :: Python :: 3.7',
-    'Programming Language :: Python :: 3.8',
-    'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3 :: Only',
@@ -39,9 +33,7 @@ build-backend = 'setuptools.build_meta'
 include = ['bev']
 
 [tool.setuptools.package-data]
-bev = [
-    'py.typed',
-]
+bev = ['py.typed']
 
 [tool.setuptools.dynamic]
 version = { attr = 'bev.__version__.__version__' }
@@ -58,7 +50,7 @@ ignore = ['W503', 'E203', 'B028', 'C408']
 per-file-ignores = [
     '**/__init__.py:F401,F403',
     'tests/*:I251',
-    'bev/cli/*:B008'
+    'bev/cli/*:B008',
 ]
 max-line-length = 120
 banned-modules = 'bev.* = Use relative imports'
