@@ -6,7 +6,10 @@ readme = 'README.md'
 requires-python = '>=3.7'
 license = { file = 'LICENSE' }
 keywords = ['data', 'version control']
-authors = [{ name = 'NeuroML Group', email = 'maxs987@gmail.com' }]
+authors = [
+    { name = 'Max', email = 'max@ira-labs.com' },
+    { name = 'Talgat', email = 't.saparov@ira-labs.com' },
+]
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'License :: OSI Approved :: Apache Software License',
