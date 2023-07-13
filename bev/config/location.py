@@ -227,5 +227,5 @@ class RedisConfig(LocationConfig):
         if isinstance(v, str):
             return cls(url=v)
 
-    def build(self) -> Location | None:
+    def build(self) -> Optional[Location]:
         return RedisLocation(self.url, self.prefix)
