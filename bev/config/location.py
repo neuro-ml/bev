@@ -216,6 +216,7 @@ class S3Config(LocationConfig):
         s3 = boto3.client('s3', endpoint_url=self.url)
         return S3(s3, self.bucket)
 
+
 @register('redis')
 class RedisConfig(LocationConfig):
     url: str
