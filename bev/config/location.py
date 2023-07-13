@@ -195,7 +195,7 @@ def from_special(x, passthrough: bool = True):
 class S3Config(LocationConfig):
     url: str
     bucket: str
-    credentials_file: Optional[str]
+    credentials_file: Optional[str] = None
 
     def build(self) -> Location | None:
         # we carefully patch the os.environ here
