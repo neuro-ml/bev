@@ -197,7 +197,7 @@ class S3Config(LocationConfig):
     bucket: str
     credentials_file: Optional[str] = None
 
-    def build(self) -> Location | None:
+    def build(self) -> Optional[Location]:
         # we carefully patch the os.environ here
         # FIXME: this is not thread safe though
         if self.credentials_file is not None:
