@@ -1,15 +1,17 @@
+import os
 import warnings
 from pathlib import Path
 from typing import Optional, Sequence
 
+import boto3
 import yaml
 from jboc import collect
 from paramiko.config import SSHConfig
-from tarn import SCP, DiskDict, Fanout, Level, Levels, Location, Nginx
+from tarn import S3, SCP, DiskDict, Fanout, Level, Levels, Location, Nginx, RedisLocation
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
 from tarn.utils import mkdir
 
-from .compat import field_validator, NoExtra, core_schema, model_validate, model_dump
+from .compat import NoExtra, core_schema, field_validator, model_dump, model_validate
 from .registry import RegistryError, add_type, find, register
 
 
@@ -187,3 +189,43 @@ def from_special(x, passthrough: bool = True):
 
     if passthrough:
         return x
+
+
+@register('s3')
+class S3Config(LocationConfig):
+    url: str
+    bucket: str
+    credentials_file: Optional[str] = None
+
+    def build(self) -> Optional[Location]:
+        # we carefully patch the os.environ here
+        # FIXME: this is not thread safe though
+        if self.credentials_file is not None:
+            path = Path(self.credentials_file).expanduser()
+            name = 'AWS_SHARED_CREDENTIALS_FILE'
+
+            current_path = os.environ.get(name)
+            if current_path and Path(current_path).expanduser() != path:
+                raise ValueError(
+                    'Cannot overwrite the current value in "AWS_SHARED_CREDENTIALS_FILE": '
+                    f'{current_path} vs {path}'
+                )
+
+            os.environ[name] = str(path)
+
+        s3 = boto3.client('s3', endpoint_url=self.url)
+        return S3(s3, self.bucket)
+
+
+@register('redis')
+class RedisConfig(LocationConfig):
+    url: str
+    prefix: str = '_'
+
+    @classmethod
+    def from_special(cls, v):
+        if isinstance(v, str):
+            return cls(url=v)
+
+    def build(self) -> Optional[Location]:
+        return RedisLocation(self.url, self.prefix)
