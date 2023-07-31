@@ -44,7 +44,7 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
             config.local.cache.storage.local.build(),
             remote=filter_remotes([remote.cache.storage for remote in config.remotes if remote.cache is not None]),
             labels=meta.labels,
-            algorithm=HashConfig(meta.hash) if isinstance(meta.hash, str) else meta.hash
+            algorithm=HashConfig(meta.hash.build()) if isinstance(meta.hash, str) else meta.hash.build()
         )
         index = CacheStorageIndex(
             GetItemPatch(config.local.cache.index.local.build()),
