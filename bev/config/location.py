@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 import boto3
+import humanfriendly
 import yaml
 from jboc import collect
 from paramiko.config import SSHConfig
-from tarn import S3, SCP, DiskDict, Fanout, Level, Levels, Location, Nginx, RedisLocation
+from pydantic import validator
+from tarn import S3, SCP, DiskDict, Fanout, Level, Levels, Location, Nginx, RedisLocation, SmallLocation
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
 from tarn.utils import mkdir
 
@@ -229,3 +231,18 @@ class RedisConfig(LocationConfig):
 
     def build(self) -> Optional[Location]:
         return RedisLocation(self.url, self.prefix)
+
+
+@register('small')
+class SmallConfig(LocationConfig):
+    location: LocationConfig
+    max_size: int
+
+    @validator('max_size', pre=True)
+    def _from_str(cls, v):
+        if isinstance(v, str):
+            return humanfriendly.parse_size(v)
+        return v
+
+    def build(self) -> Location:
+        return SmallLocation(self.location.build(), self.max_size)

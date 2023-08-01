@@ -1,15 +1,17 @@
 import importlib
 from pathlib import Path
-from typing import Callable, NamedTuple, Sequence, Tuple
+from typing import Callable, NamedTuple, Optional, Sequence, Tuple, Type
 
 from jboc import collect
 from pydantic import ValidationError
 from tarn import HashKeyStorage, Location, Writable
+from tarn.compat import HashAlgorithm
+from tarn.config import HashConfig
 from yaml import safe_load
 
-from .compat import model_validate, model_copy
 from ..exceptions import ConfigError
 from .base import ConfigMeta, RepositoryConfig, StorageCluster
+from .compat import model_copy, model_validate
 from .legacy import LegacyStorageCluster
 from .utils import CONFIG, choose_local, default_choose
 
@@ -33,6 +35,7 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
         config.local.storage.local.build(),
         remote=filter_remotes([remote.storage for remote in config.remotes]),
         labels=meta.labels,
+        algorithm=None if meta.hash is None else meta.hash.build()
     )
     index = None
     if config.local.cache is not None:
@@ -40,6 +43,7 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
             config.local.cache.storage.local.build(),
             remote=filter_remotes([remote.cache.storage for remote in config.remotes if remote.cache is not None]),
             labels=meta.labels,
+            algorithm=None if meta.hash is None else meta.hash.build()
         )
         index = CacheStorageIndex(
             GetItemPatch(config.local.cache.index.local.build()),

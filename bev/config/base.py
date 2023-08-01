@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Dict, Optional, Sequence
 
 from tarn.config import HashConfig
 
@@ -76,7 +76,7 @@ class ConfigMeta(NoExtra):
     choose: str = None
     fallback: str = None
     order: str = None
-    hash: Union[str, HashConfig] = None
+    hash: Optional[HashConfig] = None
     include: Sequence[Include] = ()
     labels: Optional[Sequence[str]] = None
 

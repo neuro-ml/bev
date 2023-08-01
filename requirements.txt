@@ -2,9 +2,10 @@ wcmatch
 pyyaml
 paramiko
 tqdm
-tarn>=0.8.0,<1.0.0
+tarn>=0.10.0,<1.0.0
 pydantic
 pluggy
 typer
 rich
 jboc<1.0.0
+humanfriendly
