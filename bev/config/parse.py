@@ -20,7 +20,6 @@ class CacheStorageIndex(NamedTuple):
     local: Location
     remote: Sequence[Location]
     storage: HashKeyStorage
-    algorithm: Optional[Type[HashAlgorithm]]
 
 
 def load_config(config: Path) -> RepositoryConfig:
