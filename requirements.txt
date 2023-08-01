@@ -8,3 +8,4 @@ pluggy
 typer
 rich
 jboc<1.0.0
+humanfriendly
