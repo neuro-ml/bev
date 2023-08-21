@@ -11,14 +11,14 @@ from .app import app_command
 @app_command
 def init(
         repository: Annotated[Path, typer.Option(
-            None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
+            '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
         )] = None,
         permissions: Annotated[str, typer.Option(
-            None, '--permissions', '-p', help='The permissions mask used to create the storage, e.g. 770',
+            '--permissions', '-p', help='The permissions mask used to create the storage, e.g. 770',
         )] = None,
         group: Annotated[str, typer.Option(
-            None, '--group', '-g', help='The group used to create the storage',
+            '--group', '-g', help='The group used to create the storage',
         )] = None,
 ):
     """Initialize a bev repository by creating the storage locations specified in its config"""

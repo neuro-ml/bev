@@ -32,9 +32,11 @@ def _fetch(repo: Repository, path: Path):
 
 @app_command
 def fetch(
-        paths: List[Path] = typer.Argument(None, help='The paths to fetch', show_default='The current directory'),
+        paths: Annotated[List[Path], typer.Argument(
+            help='The paths to fetch', show_default='The current directory'
+        )] = None,
         repository: Annotated[Path, typer.Option(
-            None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
+            '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
         )] = None
 ):

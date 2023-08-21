@@ -12,15 +12,14 @@ from .app import _app
 
 @_app.command(deprecated=True)
 def update(
-        source: Path = typer.Argument(..., help='The source path to gather', show_default=False),
+        source: Annotated[Path, typer.Argument(help='The source path to gather', show_default=False)],
         destination: Annotated[Optional[Path], typer.Option(
-            None, '--destination', '--dst',
+            '--destination', '--dst',
             help='The destination at which the hashes will be stored. '
                  'If none -  the hashes will be stored alongside the source'
         )] = None,
-        keep: Annotated[bool, typer.Option(False, help='Whether to keep the sources after hashing')] = False,
+        keep: Annotated[bool, typer.Option(help='Whether to keep the sources after hashing')] = False,
         overwrite: Annotated[bool, typer.Option(
-            False, 
             help='Whether to overwrite the existing values in case of conflict'
         )] = False,
 ):  # pragma: no cover

@@ -32,17 +32,21 @@ class PullMode(Enum):
 
 @app_command
 def pull(
-        sources: List[Path] = typer.Argument(..., help='The source paths to add', show_default=False),
-        mode: PullMode = typer.Option(..., help=PullMode.__doc__, show_default=False),
+        sources: Annotated[List[Path], typer.Argument(help='The source paths to add', show_default=False)],
+        mode: Annotated[PullMode, typer.Option(help=PullMode.__doc__, show_default=False)],
         destination: Annotated[Optional[Path], typer.Option(
-            None, '--destination', '--dst',
+            '--destination', '--dst',
             help='The destination at which the results will be stored. '
                  'If none -  the results will be stored alongside the source'
         )] = None,
-        keep: Annotated[bool, typer.Option(False, help='Whether to keep the sources after pulling the real files')] = False,
-        fetch: Annotated[bool, typer.Option(False, help='Whether to fetch the missing files from remote, if possible')] = False,
+        keep: Annotated[bool, typer.Option(
+            help='Whether to keep the sources after pulling the real files'
+        )] = False,
+        fetch: Annotated[bool, typer.Option(
+            help='Whether to fetch the missing files from remote, if possible'
+        )] = False,
         repository: Annotated[Path, typer.Option(
-            None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
+            '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
         )] = None
 ):
