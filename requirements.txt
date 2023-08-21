@@ -9,4 +9,4 @@ typer
 rich
 jboc<1.0.0
 humanfriendly
-typing_extentions
+typing_extensions
