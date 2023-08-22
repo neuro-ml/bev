@@ -3,6 +3,7 @@ from pathlib import Path
 
 import typer
 from tqdm.auto import tqdm
+from typing_extensions import Annotated
 
 from ..hash import from_hash, is_hash
 from ..shortcuts import get_current_repo
@@ -12,8 +13,8 @@ from .app import app_command
 
 @app_command
 def blame(
-        path: Path = typer.Argument(..., help='Path to the hash'),
-        relative: str = typer.Argument(..., help='The relative path inside the hashed folder')
+        path: Annotated[Path, typer.Argument(help='Path to the hash')],
+        relative: Annotated[str, typer.Argument(help='The relative path inside the hashed folder')]
 ):
     """Find the closest version which introduced a change to a value RELATIVE to the PATH"""
 

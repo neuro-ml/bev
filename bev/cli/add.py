@@ -8,6 +8,7 @@ from typing import List, Optional
 import typer
 from rich.progress import track
 from tqdm.auto import tqdm
+from typing_extensions import Annotated
 
 from ..exceptions import HashError
 from ..hash import is_hash, to_hash
@@ -20,20 +21,20 @@ from .utils import normalize_sources_and_destination
 
 @app_command
 def add(
-        sources: List[Path] = typer.Argument(..., help='The source paths to add', show_default=False),
-        destination: Optional[Path] = typer.Option(
-            None, '--destination', '--dst',
+        sources: Annotated[List[Path], typer.Argument(help='The source paths to add', show_default=False)],
+        destination: Annotated[Optional[Path], typer.Option(
+            '--destination', '--dst',
             help='The destination at which the hashes will be stored. '
                  'If none -  the hashes will be stored alongside the source'
-        ),
-        keep: bool = typer.Option(False, help='Whether to keep the sources after hashing'),
-        conflict: Conflict = typer.Option(
-            'error', case_sensitive=False, help=Conflict.__doc__.replace('\n\n', '\n').replace('\n', '\n\n')
-        ),
-        repository: Path = typer.Option(
-            None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
+        )] = None,
+        keep: Annotated[bool, typer.Option(help='Whether to keep the sources after hashing')] = False,
+        conflict: Annotated[Conflict, typer.Option(
+            case_sensitive=False, help=Conflict.__doc__.replace('\n\n', '\n').replace('\n', '\n\n')
+        )] = 'error',
+        repository: Annotated[Path, typer.Option(
+            '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
-        )
+        )] = None
 ):
     """Add files and/or folders to a bev repository"""
     pairs, repo = normalize_sources_and_destination(sources, destination, repository)

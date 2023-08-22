@@ -3,6 +3,7 @@ from typing import List
 
 import typer
 from rich.progress import track
+from typing_extensions import Annotated
 
 from ..exceptions import HashError
 from ..hash import from_hash, is_hash, is_tree, load_key, load_tree, strip_tree, to_hash
@@ -31,11 +32,13 @@ def _fetch(repo: Repository, path: Path):
 
 @app_command
 def fetch(
-        paths: List[Path] = typer.Argument(None, help='The paths to fetch', show_default='The current directory'),
-        repository: Path = typer.Option(
-            None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
+        paths: Annotated[List[Path], typer.Argument(
+            help='The paths to fetch', show_default='The current directory'
+        )] = None,
+        repository: Annotated[Path, typer.Option(
+            '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
-        )
+        )] = None
 ):
     """Fetch the missing values from remote, if possible"""
     paths = paths or [Path('.')]

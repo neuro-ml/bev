@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import typer
+from typing_extensions import Annotated
 
 from ..config import CONFIG, load_config
 from ..shortcuts import get_consistent_repo_root
@@ -9,16 +10,16 @@ from .app import app_command
 
 @app_command
 def init(
-        repository: Path = typer.Option(
-            None, '--repository', '--repo', help='The bev repository. It is usually detected automatically',
+        repository: Annotated[Path, typer.Option(
+            '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
-        ),
-        permissions: str = typer.Option(
-            None, '--permissions', '-p', help='The permissions mask used to create the storage, e.g. 770',
-        ),
-        group: str = typer.Option(
-            None, '--group', '-g', help='The group used to create the storage',
-        ),
+        )] = None,
+        permissions: Annotated[str, typer.Option(
+            '--permissions', '-p', help='The permissions mask used to create the storage, e.g. 770',
+        )] = None,
+        group: Annotated[str, typer.Option(
+            '--group', '-g', help='The group used to create the storage',
+        )] = None,
 ):
     """Initialize a bev repository by creating the storage locations specified in its config"""
     if repository is None:

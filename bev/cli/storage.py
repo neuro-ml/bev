@@ -5,6 +5,7 @@ from typing import List
 
 import typer
 from tarn.config import StorageConfig, init_storage
+from typing_extensions import Annotated
 
 from .app import app_command, cli_error
 
@@ -21,17 +22,17 @@ class Hashes(Enum):
 
 @app_command
 def storage(
-        path: Path = typer.Argument('.', help='The path to the storage root', show_default='The current directory'),
-        hash: Hashes = typer.Option('sha256', help='The hashing algorithm to use'),
-        levels: List[int] = typer.Option(
-            None, help='The levels of folders nesting', show_default='1, digest_size - 1'
-        ),
-        permissions: str = typer.Option(
-            None, '--permissions', '-p', help='The permissions mask used to create the storage, e.g. 770',
-        ),
-        group: str = typer.Option(
-            None, '--group', '-g', help='The group used to create the storage',
-        ),
+        path: Annotated[Path, typer.Argument(help='The path to the storage root', show_default='The current directory')] = '.',
+        hash: Annotated[Hashes, typer.Option(help='The hashing algorithm to use')] = 'sha256',
+        levels: Annotated[List[int], typer.Option(
+            help='The levels of folders nesting', show_default='1, digest_size - 1'
+        )] = None,
+        permissions: Annotated[str, typer.Option(
+            '--permissions', '-p', help='The permissions mask used to create the storage, e.g. 770',
+        )] = None,
+        group: Annotated[str, typer.Option(
+            '--group', '-g', help='The group used to create the storage',
+        )] = None,
 ):
     """Create a storage at a given path"""
 
