@@ -44,7 +44,7 @@ def pull(
         )] = False,
         fetch: Annotated[bool, typer.Option(
             help='Whether to fetch the missing files from remote, if possible'
-        )] = False,
+        )] = True,
         repository: Annotated[Path, typer.Option(
             '--repository', '--repo', help='The bev repository. It is usually detected automatically',
             show_default=False,
