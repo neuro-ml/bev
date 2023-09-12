@@ -125,7 +125,7 @@ class LevelsConfig(LocationConfig):
             level.location.init(meta, permissions, group)
 
 
-class SSHRemoteConfig(LocationConfig):
+class SSHRemoteConfig:
     host: str
     root: Path
     location: Optional[SSHRemote] = None
@@ -251,10 +251,10 @@ class SmallConfig(LocationConfig):
 
 
 @register('scp')
-class SCPConfig(SSHRemoteConfig):
+class SCPConfig(LocationConfig, SSHRemoteConfig):
     location = SCP
 
 
 @register('sftp')
-class SFTPConfig(SSHRemoteConfig):
+class SFTPConfig(LocationConfig, SSHRemoteConfig):
     location = SFTP
