@@ -22,10 +22,6 @@ def call_git(command: str, cwd=None, wrap=False) -> str:
         raise
 
 
-# legacy
-HashNotFoundError = HashNotFound
-
-
 def deprecate(func):
     @wraps(func)
     def decorator(*args, **kwargs):

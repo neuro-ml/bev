@@ -1,5 +1,0 @@
-some-name-from-second:
-  storage: a
-
-meta:
-  fallback: 'some-fallback'

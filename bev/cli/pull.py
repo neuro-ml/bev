@@ -1,6 +1,5 @@
 import os
 import shutil
-import warnings
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional
@@ -11,9 +10,8 @@ from typing_extensions import Annotated
 
 from ..exceptions import HashError
 from ..hash import from_hash, is_hash, to_hash
-from ..ops import Conflict, load_hash
-from .add import add
-from .app import _app, app_command, cli_error
+from ..ops import load_hash
+from .app import app_command, cli_error
 from .utils import normalize_sources, normalize_sources_and_destination
 
 
@@ -136,19 +134,3 @@ PULL_MODES = {
     PullMode.copy: lambda h, dst, repo, fetch: repo.storage.read(shutil.copyfile, h, dst, fetch=fetch),
     PullMode.hash: save_hash,
 }
-
-
-@_app.command(deprecated=True)
-def gather(
-        source: Path = typer.Argument(..., help='The source path to gather', show_default=False),
-        destination: Optional[Path] = typer.Option(
-            None, '--destination', '--dst',
-            help='The destination at which the hashes will be stored. '
-                 'If none -  the hashes will be stored alongside the source'
-        ),
-):  # pragma: no cover
-    """Reverse a "pull" command. Warning! this command is superseded by "add" and will be removed soon"""
-
-    warnings.warn('This command is deprecated. Use "add" instead', UserWarning)
-    warnings.warn('This command is deprecated. Use "add" instead', DeprecationWarning)
-    return add([source], destination, False, Conflict.error, '.')
