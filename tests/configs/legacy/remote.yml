@@ -1,7 +1,0 @@
-one:
-  storage:
-    - root: a
-      http: 'https://example.com'
-    - root: b
-      ssh: 'some-name'
-    - http: 'https://just-an-url'

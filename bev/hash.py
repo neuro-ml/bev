@@ -9,7 +9,7 @@ from tarn import HashKeyStorage
 from tarn.utils import value_to_buffer
 
 from .exceptions import HashError
-from .utils import PathOrStr, deprecate
+from .utils import PathOrStr
 
 Key = str
 Tree = Dict[PathOrStr, Union[Key, Dict]]
@@ -100,22 +100,6 @@ def normalize_tree(tree: Tree, digest_size: int):
 
     # TODO: detect folders that have hashes
     return result
-
-
-@deprecate
-def dispatch_hash(path):  # pragma: no cover
-    path = Path(path)
-    key = load_key(path)
-    stripped = strip_tree(key)
-    if key == stripped:
-        return FileHash(key, from_hash(path), path)
-    return TreeHash(stripped, from_hash(path), path)
-
-
-@deprecate
-def load_tree_key(path: Path):  # pragma: no cover
-    with open(path) as file:
-        return strip_tree(file.read().strip())
 
 
 class FileHash(NamedTuple):

@@ -230,7 +230,7 @@ class RedisConfig(LocationConfig):
             return cls(url=v)
 
     def build(self) -> Optional[Location]:
-        return RedisLocation(self.url, self.prefix)
+        return RedisLocation(self.url, prefix=self.prefix)
 
 
 @register('small')

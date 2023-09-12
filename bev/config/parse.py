@@ -1,18 +1,14 @@
 import importlib
 from pathlib import Path
-from typing import Callable, NamedTuple, Optional, Sequence, Tuple, Type
+from typing import Callable, NamedTuple, Sequence, Tuple
 
 from jboc import collect
-from pydantic import ValidationError
-from tarn import HashKeyStorage, Location, Writable
-from tarn.compat import HashAlgorithm
-from tarn.config import HashConfig
 from yaml import safe_load
+from tarn import HashKeyStorage, Location
 
 from ..exceptions import ConfigError
 from .base import ConfigMeta, RepositoryConfig, StorageCluster
 from .compat import model_copy, model_validate
-from .legacy import LegacyStorageCluster
 from .utils import CONFIG, choose_local, default_choose
 
 
@@ -46,7 +42,7 @@ def build_storage(root: Path) -> Tuple[HashKeyStorage, CacheStorageIndex]:
             algorithm=None if meta.hash is None else meta.hash.build()
         )
         index = CacheStorageIndex(
-            GetItemPatch(config.local.cache.index.local.build()),
+            config.local.cache.index.local.build(),
             filter_remotes([remote.cache.index for remote in config.remotes if remote.cache is not None]),
             cache_storage,
         )
@@ -93,22 +89,7 @@ def _parse_entry(name, entry):
         raise ConfigError(f'{name}: The key "name" is not available')
     entry = entry.copy()
     entry['name'] = name
-    # TODO: a lot of legacy code that will be removed after a few releases
-    try:
-        return StorageCluster(**entry)
-    except ValidationError as e:
-        exc = e
-    try:
-        cluster = LegacyStorageCluster(**entry)
-    except ValidationError:
-        pass
-    else:
-        kwargs = dict(name=cluster.name, hostname=cluster.hostname, storage=cluster.new_storage())
-        cache = cluster.new_cache()
-        if cache is not None:
-            kwargs['cache'] = cache
-        return StorageCluster(**kwargs)
-    raise exc
+    return StorageCluster(**entry)
 
 
 def _parse(name, config, root):
@@ -151,31 +132,3 @@ def _parse(name, config, root):
 
     meta = model_copy(meta, update=override)
     return meta, entries
-
-
-class GetItemPatch(Writable):
-    def __init__(self, location):
-        self.location = location
-        self.locations = [location]
-
-    def __getattr__(self, attr):
-        return getattr(self.location, attr)
-
-    def __getitem__(self, item):
-        assert item == 0
-        return self
-
-    def read(self, *args, **kwargs):
-        return self.location.read(*args, **kwargs)
-
-    def read_batch(self, *args, **kwargs):
-        return self.location.read_batch(*args, **kwargs)
-
-    def write(self, *args, **kwargs):
-        return self.location.write(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        return self.location.delete(*args, **kwargs)
-
-    def contents(self, *args, **kwargs):
-        return self.location.contents(*args, **kwargs)
