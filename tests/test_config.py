@@ -124,7 +124,7 @@ c9:
         local=LevelsConfig(levels=[
             LevelConfig(location=DiskDictConfig(root='/a/b'))
         ])))), ('''
-c3:
+c10:
   storage:
     local: '/a/b'
     remote:
