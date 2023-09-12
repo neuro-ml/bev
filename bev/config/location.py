@@ -9,8 +9,9 @@ import yaml
 from jboc import collect
 from paramiko.config import SSHConfig
 from pydantic import validator
-from tarn import S3, SCP, DiskDict, Fanout, Level, Levels, Location, Nginx, RedisLocation, SmallLocation
+from tarn import S3, SCP, SFTP, DiskDict, Fanout, Level, Levels, Location, Nginx, RedisLocation, SmallLocation
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
+from tarn.location.ssh.interface import SSHRemote
 from tarn.utils import mkdir
 
 from .compat import NoExtra, core_schema, field_validator, model_dump, model_validate
@@ -124,10 +125,10 @@ class LevelsConfig(LocationConfig):
             level.location.init(meta, permissions, group)
 
 
-@register('scp')
-class SCPConfig(LocationConfig):
+class SSHRemoteConfig(LocationConfig):
     host: str
     root: Path
+    location: Optional[SSHRemote] = None
 
     @classmethod
     def from_special(cls, v):
@@ -144,6 +145,8 @@ class SCPConfig(LocationConfig):
             return cls(host=host, root=root)
 
     def build(self) -> Optional[Location]:
+        if self.location is None:
+            return None
         config_path = Path('~/.ssh/config').expanduser()
         if config_path.exists():
             with open(config_path) as f:
@@ -152,7 +155,7 @@ class SCPConfig(LocationConfig):
 
             # TODO: better way of handling missing hosts
             if ssh_config.lookup(self.host) != {'hostname': self.host} or self.host in ssh_config.get_hostnames():
-                return SCP(self.host, self.root)
+                return self.location(self.host, self.root)
 
 
 @register('nginx')
@@ -215,8 +218,7 @@ class S3Config(LocationConfig):
 
             os.environ[name] = str(path)
 
-        s3 = boto3.client('s3', endpoint_url=self.url)
-        return S3(s3, self.bucket)
+        return S3(self.url, self.bucket)
 
 
 @register('redis')
@@ -246,3 +248,13 @@ class SmallConfig(LocationConfig):
 
     def build(self) -> Location:
         return SmallLocation(self.location.build(), self.max_size)
+
+
+@register('scp')
+class SCPConfig(SSHRemoteConfig):
+    location = SCP
+
+
+@register('sftp')
+class SFTPConfig(SSHRemoteConfig):
+    location = SFTP

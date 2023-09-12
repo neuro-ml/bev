@@ -5,8 +5,16 @@ import pytest
 from pydantic import ValidationError
 from yaml import safe_load
 
-from bev.config import parse, load_config, StorageCluster, StorageConfig, CacheConfig
-from bev.config.location import DiskDictConfig, FanoutConfig, LevelsConfig, LevelConfig, NginxConfig, SCPConfig
+from bev.config import CacheConfig, StorageCluster, StorageConfig, load_config, parse
+from bev.config.location import (
+    DiskDictConfig,
+    FanoutConfig,
+    LevelConfig,
+    LevelsConfig,
+    NginxConfig,
+    SCPConfig,
+    SFTPConfig,
+)
 from bev.config.parse import _parse, _parse_entry
 from bev.exceptions import ConfigError
 
@@ -115,7 +123,18 @@ c9:
 ''', StorageCluster(name='c9', storage=StorageConfig(
         local=LevelsConfig(levels=[
             LevelConfig(location=DiskDictConfig(root='/a/b'))
-        ])))),
+        ])))), ('''
+c3:
+  storage:
+    local: '/a/b'
+    remote:
+      - nginx: 'https://example.com'
+      - sftp: 'some-hostname:/path'
+''', StorageCluster(name='c3', storage=StorageConfig(
+        local=DiskDictConfig(root='/a/b'),
+        remote=FanoutConfig(locations=[
+            NginxConfig(url='https://example.com'), SFTPConfig(host='some-hostname', root='/path'),
+        ]))))
 )
 
 
@@ -181,6 +200,14 @@ def test_inheritance_errors(configs_root):
     file = configs_root / 'errors/base.yml'
     with pytest.raises(ConfigError), open(file, 'r') as fd:
         _parse(file, safe_load(fd), file)
+
+
+def test_custom_cache_storage(configs_root):
+    config = load_config(configs_root / 'custom-cache-storage.yml')
+    assert config.local.cache.storage != config.local.storage
+
+    config = load_config(configs_root / 'full.yml')
+    assert config.local.cache.storage == config.local.storage
 
 
 def test_custom_cache_storage(configs_root):
