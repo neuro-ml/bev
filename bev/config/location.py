@@ -11,7 +11,6 @@ from paramiko.config import SSHConfig
 from pydantic import validator
 from tarn import S3, SCP, SFTP, DiskDict, Fanout, Level, Levels, Location, Nginx, RedisLocation, SmallLocation
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
-from tarn.location.ssh.interface import SSHRemote
 from tarn.utils import mkdir
 
 from .compat import NoExtra, core_schema, field_validator, model_dump, model_validate
@@ -125,10 +124,10 @@ class LevelsConfig(LocationConfig):
             level.location.init(meta, permissions, group)
 
 
-class SSHRemoteConfig:
+class SSHRemoteConfig(LocationConfig):
     host: str
     root: Path
-    location: Optional[SSHRemote] = None
+    _location: Optional[type] = None
 
     @classmethod
     def from_special(cls, v):
@@ -145,7 +144,7 @@ class SSHRemoteConfig:
             return cls(host=host, root=root)
 
     def build(self) -> Optional[Location]:
-        if self.location is None:
+        if self._location is None:
             return None
         config_path = Path('~/.ssh/config').expanduser()
         if config_path.exists():
@@ -155,7 +154,7 @@ class SSHRemoteConfig:
 
             # TODO: better way of handling missing hosts
             if ssh_config.lookup(self.host) != {'hostname': self.host} or self.host in ssh_config.get_hostnames():
-                return self.location(self.host, self.root)
+                return self._location(self.host, self.root)
 
 
 @register('nginx')
@@ -251,10 +250,10 @@ class SmallConfig(LocationConfig):
 
 
 @register('scp')
-class SCPConfig(LocationConfig, SSHRemoteConfig):
-    location = SCP
+class SCPConfig(SSHRemoteConfig):
+    _location = SCP
 
 
 @register('sftp')
-class SFTPConfig(LocationConfig, SSHRemoteConfig):
-    location = SFTP
+class SFTPConfig(SSHRemoteConfig):
+    _location = SFTP
