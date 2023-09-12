@@ -1,6 +1,0 @@
-main:
-  storage: /a/b/c
-
-  cache:
-    index: /some/index
-    storage: /some/storage
