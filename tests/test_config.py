@@ -130,7 +130,7 @@ c10:
     remote:
       - nginx: 'https://example.com'
       - sftp: 'some-hostname:/path'
-''', StorageCluster(name='c3', storage=StorageConfig(
+''', StorageCluster(name='c10', storage=StorageConfig(
         local=DiskDictConfig(root='/a/b'),
         remote=FanoutConfig(locations=[
             NginxConfig(url='https://example.com'), SFTPConfig(host='some-hostname', root='/path'),
