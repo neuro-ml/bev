@@ -3,7 +3,6 @@ import warnings
 from pathlib import Path
 from typing import Optional, Sequence
 
-import boto3
 import humanfriendly
 import yaml
 from jboc import collect
