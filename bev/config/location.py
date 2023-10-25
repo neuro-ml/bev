@@ -87,6 +87,7 @@ class LevelConfig(NoExtra):
     location: LocationConfig
     write: bool = True
     replicate: bool = True
+    touch: bool = False
 
 
 @register('levels')
