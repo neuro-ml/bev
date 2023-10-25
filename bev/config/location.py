@@ -99,7 +99,7 @@ class LevelsConfig(LocationConfig):
     @collect
     def _from_location(cls, vs):
         for v in vs:
-            if (isinstance(v, dict) and set(v) <= {'location', 'write', 'replicate'}) or isinstance(v, LevelConfig):
+            if (isinstance(v, dict) and set(v) <= {'location', 'write', 'replicate', 'touch'}) or isinstance(v, LevelConfig):
                 yield v
             else:
                 yield {'location': v}
