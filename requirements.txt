@@ -2,7 +2,7 @@ wcmatch
 pyyaml
 paramiko
 tqdm
-tarn>=0.12.0,<1.0.0
+tarn>=0.13.2,<1.0.0
 pydantic
 pluggy
 typer
