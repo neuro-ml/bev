@@ -3,7 +3,6 @@ import warnings
 from pathlib import Path
 from typing import Optional, Sequence
 
-import boto3
 import humanfriendly
 import yaml
 from jboc import collect
@@ -88,6 +87,7 @@ class LevelConfig(NoExtra):
     location: LocationConfig
     write: bool = True
     replicate: bool = True
+    touch: bool = False
 
 
 @register('levels')
@@ -99,7 +99,7 @@ class LevelsConfig(LocationConfig):
     @collect
     def _from_location(cls, vs):
         for v in vs:
-            if (isinstance(v, dict) and set(v) <= {'location', 'write', 'replicate'}) or isinstance(v, LevelConfig):
+            if (isinstance(v, dict) and set(v) <= {'location', 'write', 'replicate', 'touch'}) or isinstance(v, LevelConfig):
                 yield v
             else:
                 yield {'location': v}
@@ -114,7 +114,7 @@ class LevelsConfig(LocationConfig):
         for level in self.levels:
             loc = level.location.build()
             if loc is not None:
-                levels.append(Level(loc, level.write, level.replicate))
+                levels.append(Level(loc, level.write, level.replicate, level.touch))
 
         if levels:
             return Levels(*levels)
