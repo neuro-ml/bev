@@ -114,7 +114,7 @@ class LevelsConfig(LocationConfig):
         for level in self.levels:
             loc = level.location.build()
             if loc is not None:
-                levels.append(Level(loc, level.write, level.replicate))
+                levels.append(Level(loc, level.write, level.replicate, level.touch))
 
         if levels:
             return Levels(*levels)
