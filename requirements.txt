@@ -5,7 +5,7 @@ tqdm
 tarn>=0.13.2,<1.0.0
 pydantic
 pluggy
-typer
+typer>=0.9.0,<1.0.0
 rich
 jboc<1.0.0
 humanfriendly
