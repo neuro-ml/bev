@@ -2,7 +2,7 @@ wcmatch
 pyyaml
 paramiko
 tqdm
-tarn>=0.13.2,<1.0.0
+tarn>=0.14.0,<1.0.0
 pydantic
 pluggy
 typer>=0.9.0,<1.0.0
@@ -10,3 +10,4 @@ rich
 jboc<1.0.0
 humanfriendly
 typing_extensions
+pytimeparse
