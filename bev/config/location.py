@@ -1,13 +1,14 @@
 import os
 import warnings
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import humanfriendly
 import yaml
 from jboc import collect
 from paramiko.config import SSHConfig
 from pydantic import validator
+from pytimeparse.timeparse import timeparse
 from tarn import S3, SCP, SFTP, DiskDict, Fanout, Level, Levels, Location, Nginx, RedisLocation, SmallLocation
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
 from tarn.utils import mkdir
@@ -224,6 +225,9 @@ class S3Config(LocationConfig):
 class RedisConfig(LocationConfig):
     url: str
     prefix: str = '_'
+    keep_labels: bool = False
+    keep_usage: bool = False
+    ttl: Optional[Union[int, str]] = None
 
     @classmethod
     def from_special(cls, v):
@@ -231,7 +235,12 @@ class RedisConfig(LocationConfig):
             return cls(url=v)
 
     def build(self) -> Optional[Location]:
-        return RedisLocation(self.url, prefix=self.prefix)
+        if isinstance(self.ttl, str):
+            ttl = timeparse(self.ttl)
+            if ttl is None:
+                raise ValueError(f'The time format could not be parsed: {self.ttl}')
+        return RedisLocation(self.url, prefix=self.prefix, keep_labels=self.keep_labels, 
+                             keep_usage=self.keep_usage, ttl=self.ttl)
 
 
 @register('small')
