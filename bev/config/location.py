@@ -239,6 +239,8 @@ class RedisConfig(LocationConfig):
             ttl = timeparse(self.ttl)
             if ttl is None:
                 raise ValueError(f'The time format could not be parsed: {self.ttl}')
+        else:
+            ttl = self.ttl
         return RedisLocation(self.url, prefix=self.prefix, keep_labels=self.keep_labels, 
                              keep_usage=self.keep_usage, ttl=ttl)
 
