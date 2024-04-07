@@ -15,6 +15,7 @@ from .utils import PathOrStr
 from .vc import VC, CommittedVersion, SubprocessGit, Version
 from .wc import BevLocalGlob, BevVCGlob
 
+
 _NoArg = object()
 
 
@@ -139,7 +140,7 @@ class Repository:
                 raise NameConflict(f'Both the path "{relative}" and its hash "{to_hash(relative)}" found')
             return absolute.resolve()
 
-        key = self.get_key(relative, version=version, fetch=fetch)
+        key = self.get_key(*parts, version=version, fetch=fetch)
         return self.storage.read(_resolve, key, fetch=fetch)
 
     def glob(self, *parts: PathOrStr, version: Optional[Version] = None,
