@@ -7,7 +7,6 @@ import humanfriendly
 import yaml
 from jboc import collect
 from paramiko.config import SSHConfig
-from pydantic import validator
 from pytimeparse.timeparse import timeparse
 from tarn import S3, SCP, SFTP, DiskDict, Fanout, Level, Levels, Location, Nginx, RedisLocation, SmallLocation
 from tarn.config import CONFIG_NAME as STORAGE_CONFIG_NAME, StorageConfig as TarnStorageConfig
@@ -100,7 +99,10 @@ class LevelsConfig(LocationConfig):
     @collect
     def _from_location(cls, vs):
         for v in vs:
-            if (isinstance(v, dict) and set(v) <= {'location', 'write', 'replicate', 'touch'}) or isinstance(v, LevelConfig):
+            if (
+                    (isinstance(v, dict) and set(v) <= {'location', 'write', 'replicate', 'touch'}) or
+                    isinstance(v, LevelConfig)
+            ):
                 yield v
             else:
                 yield {'location': v}
@@ -241,7 +243,7 @@ class RedisConfig(LocationConfig):
                 raise ValueError(f'The time format could not be parsed: {self.ttl}')
         else:
             ttl = self.ttl
-        return RedisLocation(self.url, prefix=self.prefix, keep_labels=self.keep_labels, 
+        return RedisLocation(self.url, prefix=self.prefix, keep_labels=self.keep_labels,
                              keep_usage=self.keep_usage, ttl=ttl)
 
 
@@ -250,7 +252,7 @@ class SmallConfig(LocationConfig):
     location: LocationConfig
     max_size: int
 
-    @validator('max_size', pre=True)
+    @field_validator('max_size', mode='before')
     def _from_str(cls, v):
         if isinstance(v, str):
             return humanfriendly.parse_size(v)
