@@ -7,6 +7,7 @@ from typing import Optional, Sequence, Union
 from tarn.digest import digest_value
 from wcmatch.glob import GLOBSTAR
 
+from .compat import cached_property
 from .config import CONFIG, build_storage, find_vcs_root
 from .exceptions import HashNotFound, InconsistentHash, InconsistentRepositories, NameConflict, RepositoryNotFound
 from .hash import Key, is_hash, is_tree, load_key, load_tree, strip_tree, to_hash
@@ -42,10 +43,17 @@ class Repository:
     def __init__(self, *root: PathOrStr, fetch: bool = True, version: Optional[Version] = None, check: bool = False):
         self.root = Path(*root)
         self.prefix = Path()
-        self.storage, self.cache = build_storage(self.root)
         self.vc: VC = SubprocessGit(self.root)
         self.fetch, self.version, self.check = fetch, version, check
         self._cache = {}
+
+    @property
+    def storage(self):
+        return self._built[0]
+
+    @property
+    def cache(self):
+        return self._built[1]
 
     def copy(self, fetch: bool = _NoArg, version: Optional[Version] = _NoArg, check: bool = _NoArg,
              prefix: PathOrStr = _NoArg, cache: dict = _NoArg):
@@ -226,6 +234,10 @@ class Repository:
         return self.root / self.prefix
 
     # internal logic
+
+    @cached_property
+    def _built(self):
+        return build_storage(self.root)
 
     def _get_tree(self, key, version, fetch):
         # we need the version here, because we want to cache only a committed tree
