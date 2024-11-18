@@ -11,6 +11,7 @@ from tarn.utils import value_to_buffer
 from .exceptions import HashError
 from .utils import PathOrStr
 
+
 Key = str
 Tree = Dict[PathOrStr, Union[Key, Dict]]
 HashType = Union[Key, Tree]

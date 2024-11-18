@@ -1,6 +1,6 @@
 # we will try to support both versions 1 and 2 of pydantic while they are more or less popular
 try:
-    from pydantic import field_validator as _field_validator, model_validator, BaseModel
+    from pydantic import BaseModel, field_validator as _field_validator, model_validator
     from pydantic_core import core_schema
 
 
@@ -27,7 +27,7 @@ try:
         }
 
 except ImportError:
-    from pydantic import root_validator, validator as _field_validator, BaseModel
+    from pydantic import BaseModel, root_validator, validator as _field_validator
 
     # we don't use this with pydantic==1 anyway
     core_schema = None

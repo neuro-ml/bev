@@ -1,14 +1,14 @@
-import cloudpickle
 import os
 import shutil
 from pathlib import Path
 
+import cloudpickle
 import pytest
 import tarn.pickler
 from tarn.pickler.interface import PickleError
 
 from bev import Local, Repository
-from bev.exceptions import InconsistentHash, HashNotFound
+from bev.exceptions import HashNotFound, InconsistentHash
 from bev.testing import create_structure
 
 
