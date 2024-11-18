@@ -1,6 +1,4 @@
 meta:
-  order: 'base-order'
-
   include:
     - file: 'second.yml'
       optional: false
