@@ -7,13 +7,7 @@ from yaml import safe_load
 
 from bev.config import CacheConfig, StorageCluster, StorageConfig, load_config, parse
 from bev.config.location import (
-    DiskDictConfig,
-    FanoutConfig,
-    LevelConfig,
-    LevelsConfig,
-    NginxConfig,
-    SCPConfig,
-    SFTPConfig,
+    DiskDictConfig, FanoutConfig, LevelConfig, LevelsConfig, NginxConfig, SCPConfig, SFTPConfig
 )
 from bev.config.parse import _parse, _parse_entry
 from bev.exceptions import ConfigError

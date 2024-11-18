@@ -1,6 +1,7 @@
 import importlib
 from typing import Optional, Type
 
+
 _REGISTRY = {}
 
 

@@ -4,8 +4,9 @@ from typer.testing import CliRunner
 
 from bev import Repository
 from bev.cli.entrypoint import app
-from bev.hash import load_key, is_tree, tree_to_hash, load_tree, strip_tree
-from bev.testing import create_structure, TempDir
+from bev.hash import is_tree, load_key, load_tree, strip_tree, tree_to_hash
+from bev.testing import TempDir, create_structure
+
 
 runner = CliRunner()
 

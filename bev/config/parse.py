@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import Callable, NamedTuple, Sequence, Tuple
 
 from jboc import collect
-from yaml import safe_load
 from tarn import HashKeyStorage, Location
+from yaml import safe_load
 
 from ..exceptions import ConfigError
 from .base import ConfigMeta, RepositoryConfig, StorageCluster
