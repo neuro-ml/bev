@@ -3,7 +3,7 @@ name = 'bev'
 dynamic = ['version', 'dependencies']
 description = 'A small manager for versioned data'
 readme = 'README.md'
-requires-python = '>=3.8'
+requires-python = '>=3.9'
 license = { file = 'LICENSE' }
 keywords = ['data', 'version control']
 authors = [
