@@ -1,4 +1,3 @@
-import warnings
 from typing import Any, Dict, Optional, Sequence
 
 from tarn.config import HashConfig
@@ -75,15 +74,9 @@ class StorageCluster(NoExtra):
 class ConfigMeta(NoExtra):
     choose: str = None
     fallback: str = None
-    order: str = None
     hash: Optional[HashConfig] = None
     include: Sequence[Include] = ()
     labels: Optional[Sequence[str]] = None
-
-    @field_validator('order')
-    def deprecate_order(cls, v):
-        if v is not None:
-            warnings.warn('The field "order" is deprecated and has no effect anymore')
 
     @field_validator('hash', mode='before')
     def normalize_hash(cls, v):

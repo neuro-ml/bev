@@ -5,11 +5,10 @@ import typer
 from rich.progress import track
 from typing_extensions import Annotated
 
-from ..exceptions import HashError
+from ..exceptions import HashError, HashNotFound
 from ..hash import from_hash, is_hash, is_tree, load_key, load_tree, strip_tree, to_hash
 from ..interface import Repository
 from ..shortcuts import get_consistent_repo
-from ..utils import HashNotFound
 from .app import app_command
 
 

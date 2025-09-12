@@ -1,6 +1,6 @@
 import pytest
 
-from bev.config import register, NginxConfig, find, LocationConfig, RegistryError
+from bev.config import LocationConfig, NginxConfig, RegistryError, find, register
 
 
 def test_invalid():

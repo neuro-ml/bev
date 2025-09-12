@@ -6,6 +6,7 @@ from typing import List, Optional
 
 import typer
 from rich.progress import track
+from tarn.utils import value_to_buffer
 from typing_extensions import Annotated
 
 from ..exceptions import HashError
@@ -130,7 +131,12 @@ def save_hash(value, file, repo, fetch):
         f.write(value)
 
 
+def copy_value(value, file):
+    with value_to_buffer(value) as f, open(file, 'wb') as file:
+        shutil.copyfileobj(f, file)
+
+
 PULL_MODES = {
-    PullMode.copy: lambda h, dst, repo, fetch: repo.storage.read(shutil.copyfile, h, dst, fetch=fetch),
+    PullMode.copy: lambda h, dst, repo, fetch: repo.storage.read(copy_value, h, dst, fetch=fetch),
     PullMode.hash: save_hash,
 }

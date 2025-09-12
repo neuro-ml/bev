@@ -3,8 +3,8 @@ from pathlib import Path
 from typing import Callable, NamedTuple, Sequence, Tuple
 
 from jboc import collect
-from yaml import safe_load
 from tarn import HashKeyStorage, Location
+from yaml import safe_load
 
 from ..exceptions import ConfigError
 from .base import ConfigMeta, RepositoryConfig, StorageCluster
@@ -118,7 +118,7 @@ def _parse(name, config, root):
             raise ConfigError(f'{name}: Trying to override the names {common} from parent config {parent.value}')
 
         override.update({
-            k: getattr(parent_meta, k) for k in ('fallback', 'order', 'choose', 'hash') if getattr(meta, k) is None
+            k: getattr(parent_meta, k) for k in ('fallback', 'choose', 'hash') if getattr(meta, k) is None
         })
         if meta.hash is None:
             meta = model_copy(meta, update=dict(hash=parent_meta.hash))

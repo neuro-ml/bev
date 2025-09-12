@@ -10,6 +10,7 @@ from typing import NamedTuple, Sequence, Union
 from .config import find_vcs_root
 from .local import LocalVersion
 
+
 CommittedVersion = str
 Version = Union[CommittedVersion, LocalVersion]
 

@@ -6,11 +6,11 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
+from tarn.config import StorageConfig, init_storage
 
 from bev.cli.add import add
 from bev.ops import Conflict
 from bev.testing import create_structure
-from tarn.config import init_storage, StorageConfig
 
 
 @pytest.fixture

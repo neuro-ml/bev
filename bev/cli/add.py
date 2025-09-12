@@ -1,20 +1,16 @@
-import json
 import os
 import shutil
-from collections import OrderedDict
 from pathlib import Path
 from typing import List, Optional
 
 import typer
 from rich.progress import track
-from tqdm.auto import tqdm
 from typing_extensions import Annotated
 
 from ..exceptions import HashError
 from ..hash import is_hash, to_hash
-from ..interface import Repository
 from ..ops import Conflict, gather, load_hash, save_hash
-from ..utils import PathOrStr, deprecate
+from ..utils import PathOrStr
 from .app import app_command
 from .utils import normalize_sources_and_destination
 
@@ -100,67 +96,3 @@ def _gather_and_write(source: PathOrStr, destination: PathOrStr, keep: bool, con
             shutil.rmtree(source)
         else:
             os.remove(source)
-
-
-@deprecate
-def validate_file(path: Path):  # pragma: no cover
-    assert path.is_file(), path
-    if is_hash(path):
-        raise ValueError('You are trying to add a hash to the storage.')
-
-    return path
-
-
-@deprecate
-def save_tree(repo: Repository, tree: dict, destination: Path):  # pragma: no cover
-    # save the directory description
-    # making sure that each time the same string will be saved
-    tree = OrderedDict((k, tree[k]) for k in sorted(tree))
-    # FIXME
-    tree_path = destination.parent / f'{destination.name}.hash.temp'
-
-    # TODO: storage should allow writing directly from memory
-    with open(tree_path, 'w') as file:
-        json.dump(tree, file)
-    key = repo.storage.write(tree_path).hex()
-    os.remove(tree_path)
-
-    with open(destination, 'w') as file:
-        file.write(f'T:{key}')
-
-    return key
-
-
-@deprecate
-def add_file(repo: Repository, source: Path, destination: Optional[Path], keep: bool):  # pragma: no cover
-    validate_file(source)
-    key = repo.storage.write(source).hex()
-
-    if destination is not None:
-        assert is_hash(destination)
-        with open(destination, 'w') as file:
-            file.write(key)
-
-    if not keep:
-        os.remove(source)
-
-    return key
-
-
-@deprecate
-def add_folder(repo: Repository, source: Path, destination: Optional[Path], keep: bool):  # pragma: no cover
-    assert source.is_dir()
-
-    tree = {}
-    files = [file for file in source.glob('**/*') if not file.is_dir()]
-    for file in tqdm(files):
-        relative = file.relative_to(source)
-        tree[str(relative)] = add_file(repo, file, None, True)
-
-    result = tree
-    if destination is not None:
-        result = save_tree(repo, tree, destination)
-    if not keep:
-        shutil.rmtree(source)
-
-    return result

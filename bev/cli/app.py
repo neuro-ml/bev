@@ -4,6 +4,7 @@ import typer
 
 from ..exceptions import BevError
 
+
 _app = typer.Typer()
 
 
