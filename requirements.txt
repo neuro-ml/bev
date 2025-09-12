@@ -2,7 +2,7 @@ wcmatch>=10.0,<10.1
 pyyaml
 paramiko
 tqdm
-tarn>=0.14.0,<1.0.0
+tarn>=0.14.2,<1.0.0
 pydantic
 typer>=0.9.0,<1.0.0
 rich
